@@ -1,15 +1,21 @@
-import { useState } from 'react'
-import './App.css'
+import { LogIn } from "lucide-react";
+import Login from "./pages/Login";
+import "./App.css";
 
 function App() {
+  return (
+    <>
+    <div className="body">
+  <div className="left">
+    <Login />
+  </div>
 
-    return (
-        <div className="App">
-            <h1>Task Management Dashboard</h1>
-        </div>
-    )
-
-
+  <div className="right">
+    <div className="mainImage"></div>
+  </div>
+</div>
+    </>
+  );
 }
 
-export default App
+export default App;
