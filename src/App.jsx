@@ -1,4 +1,3 @@
-import { LogIn } from "lucide-react";
 import Login from "./pages/Login";
 import "./App.css";
 
