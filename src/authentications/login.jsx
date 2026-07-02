@@ -1,20 +1,27 @@
 import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import Input from "../components/input";
 import { getUsers } from "../services/authservices";
 
 function Login() {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    rememberMe: false,
-  });
+  const location = useLocation();
 
+  const [formData, setFormData] = useState({ email: "", password: "", rememberMe: false, });
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (location.state?.registered) {
+      setSuccess("Registration successful! Please login.");
+
+      const timer = setTimeout(() => {
+        setSuccess("");
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
 
     const storedUser =
       JSON.parse(localStorage.getItem("user")) ||
@@ -33,11 +40,11 @@ function Login() {
 
     const timer = setTimeout(() => {
       setSuccess("");
+      setError("");
     }, 3000);
 
     return () => clearTimeout(timer);
-
-  }, []);
+  }, [location.state]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -60,12 +67,12 @@ function Login() {
 
       const user = users.find(
         (u) =>
-          u.email === formData.email &&
+          u.email.trim().toLowerCase() ===
+            formData.email.trim().toLowerCase() &&
           u.password === formData.password
       );
 
       if (user) {
-
         localStorage.removeItem("user");
         sessionStorage.removeItem("user");
 
@@ -76,7 +83,7 @@ function Login() {
         }
 
         setLoggedInUser(user);
-        setSuccess("Login successful!");
+        setSuccess(`Login successful! Welcome ${user.name}.`);
       } else {
         setError("Invalid email or password");
       }
@@ -85,25 +92,29 @@ function Login() {
       setError("Something went wrong");
     } finally {
       setLoading(false);
+
+      setTimeout(() => {
+        setSuccess("");
+        setError("");
+      }, 3000);
     }
   };
 
-  const handleLogout = () => {
-    
-    localStorage.removeItem("user");
-    sessionStorage.removeItem("user");
-
-    setLoggedInUser(null);
-
-    setFormData({
-      email: "",
-      password: "",
-      rememberMe: false,
-    });
-
-    setSuccess("");
-    setError("");
-  };
+  // const handleLogout = () => {
+  //   localStorage.removeItem("user");
+  //   sessionStorage.removeItem("user");
+  //
+  //   setLoggedInUser(null);
+  //
+  //   setFormData({
+  //     email: "",
+  //     password: "",
+  //     rememberMe: false,
+  //   });
+  //
+  //   setSuccess("");
+  //   setError("");
+  // };
 
   return (
     <div className="login-container">
@@ -111,7 +122,7 @@ function Login() {
 
       <p>
         Please enter your login information or{" "}
-        <a href="/register">register</a> if you don't have an account.
+        <Link to="/register?token=1">register</Link> if you don't have an account.
       </p>
 
       <form onSubmit={handleSubmit}>
@@ -121,7 +132,7 @@ function Login() {
           type="email"
           value={formData.email}
           onChange={handleChange}
-          placeholder="Enter email"
+          placeholder="Enter email..."
         />
 
         <Input
@@ -130,7 +141,7 @@ function Login() {
           type="password"
           value={formData.password}
           onChange={handleChange}
-          placeholder="Enter password"
+          placeholder="Enter password..."
         />
 
         <div className="remember-me">
@@ -150,20 +161,15 @@ function Login() {
         </button>
       </form>
 
-      {
-        loggedInUser ? (
-          <button
-            style={{ marginTop: "15px" }}
-            onClick={handleLogout}
-          >
-            Logout
-          </button>
-        ) : null
-      }
-      {error ? <p style={{ color: "red" }}>{error}</p> : null}
+      {/* {loggedInUser ? (
+        <button className="logout-button" onClick={handleLogout}>
+          Logout
+        </button>
+      ) : null} */}
 
-      {success ? <p style={{ color: "white" }}>{success}</p> : null}
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
+      {success && <p style={{ color: "lightgreen" }}>{success}</p>}
     </div>
   );
 }
