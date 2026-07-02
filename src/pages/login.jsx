@@ -1,4 +1,4 @@
-import  { useState } from "react";
+import { useState, useEffect } from "react";
 import Input from "../components/input";
 import { getUsers } from "../services/authservices";
 
@@ -9,9 +9,35 @@ function Login() {
     rememberMe: false,
   });
 
+  const [loggedInUser, setLoggedInUser] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+
+    const storedUser =
+      JSON.parse(localStorage.getItem("user")) ||
+      JSON.parse(sessionStorage.getItem("user"));
+
+    if (storedUser) {
+      setLoggedInUser(storedUser);
+      setSuccess(`Welcome back, ${storedUser.email}`);
+
+      setFormData((prev) => ({
+        ...prev,
+        email: storedUser.email,
+        rememberMe: !!localStorage.getItem("user"),
+      }));
+    }
+
+    const timer = setTimeout(() => {
+      setSuccess("");
+    }, 3000);
+
+    return () => clearTimeout(timer);
+
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -24,6 +50,7 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setLoading(true);
     setError("");
     setSuccess("");
@@ -38,23 +65,44 @@ function Login() {
       );
 
       if (user) {
-        
+
+        localStorage.removeItem("user");
+        sessionStorage.removeItem("user");
+
+        if (formData.rememberMe) {
+          localStorage.setItem("user", JSON.stringify(user));
+        } else {
+          sessionStorage.setItem("user", JSON.stringify(user));
+        }
+
+        setLoggedInUser(user);
         setSuccess("Login successful!");
-        setError("");
-        console.log("Logged in user:", user);
-        console.log("Remember Me:", formData.rememberMe);
       } else {
         setError("Invalid email or password");
-        setSuccess("");
       }
     } catch (err) {
-      console.log(err);
+      console.error(err);
       setError("Something went wrong");
-      setSuccess("");
-    }
-    finally {
+    } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    
+    localStorage.removeItem("user");
+    sessionStorage.removeItem("user");
+
+    setLoggedInUser(null);
+
+    setFormData({
+      email: "",
+      password: "",
+      rememberMe: false,
+    });
+
+    setSuccess("");
+    setError("");
   };
 
   return (
@@ -102,8 +150,20 @@ function Login() {
         </button>
       </form>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {success && <p style={{ color: "green" }}>{success}</p>}
+      {
+        loggedInUser ? (
+          <button
+            style={{ marginTop: "15px" }}
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+        ) : null
+      }
+      {error ? <p style={{ color: "red" }}>{error}</p> : null}
+
+      {success ? <p style={{ color: "white" }}>{success}</p> : null}
+
     </div>
   );
 }
