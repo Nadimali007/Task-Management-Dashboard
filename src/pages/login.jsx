@@ -98,10 +98,13 @@ function Login() {
         setLoggedInUser(user);
         setSuccess(`Login successful! Welcome ${user.name}.`);
 
+        
+
         setTimeout(() => {
                 navigate("/dashboard", {
                     state: {
                         registered: true,
+                        UserID: user.id,
                     },
                 });
             }, 2000);
