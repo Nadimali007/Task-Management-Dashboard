@@ -1,23 +1,35 @@
 import { Routes, Route } from "react-router-dom";
-import Login from "./authentications/login";
-import Register from "./authentications/register";
+import Login from "./pages/login";
+import Register from "./pages/register";
+import Dashboard from "./pages/Dashboard";
+import AuthLayout from "./layouts/authlayout";
 import "./App.css";
 
 function App() {
   return (
-    <div className="body">
-      <div className="left">
-        <Routes>
-          
-          <Route path="/" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-        </Routes>
-      </div>
+    
+<Routes>
+  <Route
+    path="/"
+    element={
+      <AuthLayout>
+        <Login />
+      </AuthLayout>
+    }
+  />
 
-      <div className="right">
-        <div className="mainImage"></div>
-      </div>
-    </div>
+  <Route
+    path="/register"
+    element={
+      <AuthLayout>
+        <Register />
+      </AuthLayout>
+    }
+  />
+
+  <Route path="/dashboard" element={<Dashboard />} />
+</Routes>
+
   );
 }
 
