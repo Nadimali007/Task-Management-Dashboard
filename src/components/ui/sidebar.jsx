@@ -1,4 +1,3 @@
-"use client";
 import * as React from "react"
 import { cva } from "class-variance-authority";
 import { Slot } from "radix-ui"
@@ -21,7 +20,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { PanelLeftIcon } from "lucide-react"
+import { Menu } from "lucide-react"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -142,7 +141,7 @@ function Sidebar({
       <div
         data-slot="sidebar"
         className={cn(
-          "flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground",
+          "flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground p-5",
           className
         )}
         {...props}>
@@ -227,19 +226,23 @@ function SidebarTrigger({
 
   return (
     <Button
-      data-sidebar="trigger"
-      data-slot="sidebar-trigger"
-      variant="ghost"
-      size="icon-sm"
-      className={cn(className)}
-      onClick={(event) => {
-        onClick?.(event)
-        toggleSidebar()
-      }}
-      {...props}>
-      <PanelLeftIcon />
-      <span className="sr-only">Toggle Sidebar</span>
-    </Button>
+  data-sidebar="trigger"
+  data-slot="sidebar-trigger"
+  variant="ghost"
+  size="icon-sm"
+  className={cn(
+    "bg-transparent border-0 shadow-none hover:bg-gray-200 dark:hover:bg-zinc-800",
+    className
+  )}
+  onClick={(event) => {
+    onClick?.(event)
+    toggleSidebar()
+  }}
+  {...props}
+>
+  <Menu className="h-6 w-6" />
+  <span className="sr-only">Toggle Sidebar</span>
+</Button>
   );
 }
 

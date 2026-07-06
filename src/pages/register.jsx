@@ -112,78 +112,78 @@ function Register() {
     };
 
     return (
-        <div className="login-container">
-            <h2>Register for System</h2>
 
-            <p>
-                Please enter your registration information or{" "}
-                <Link to="/">login</Link> if you already have an account.
-            </p>
+        <div className="register-page">
+            <div className="register-container">
+               <h4>TaskMasterPro</h4>
 
-            <form onSubmit={handleSubmit}>
-                <Input
-                    label="Name"
-                    name="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="Enter name..."
-                />
+            <h3>ENTERPRISE SAAS WORKSPACE</h3>
 
-                <Input
-                    label="Email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="Enter email..."
-                />
+                <form onSubmit={handleSubmit}>
+                    <Input
+                        label="Name"
+                        name="name"
+                        type="text"
+                        value={formData.name}
+                        onChange={handleChange}
+                        placeholder="Enter name..."
+                    />
 
-                <Input
-                    label="Phone Number"
-                    name="phone"
-                    type="text"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="Enter phone number..."
-                />
+                    <Input
+                        label="Email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        placeholder="Enter email..."
+                    />
 
-                <Input
-                    label="Role"
-                    name="role"
-                    type="dropdown"
-                    value={formData.role}
-                    onChange={handleChange}
-                    placeholder="Select role..."
-                    options={["Employee", "Manager"]}
-                />
+                    <Input
+                        label="Phone Number"
+                        name="phone"
+                        type="text"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        placeholder="Enter phone number..."
+                    />
 
-                <Input
-                    label="Password"
-                    name="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Enter password..."
-                />
+                    <Input
+                        label="Role"
+                        name="role"
+                        type="dropdown"
+                        value={formData.role}
+                        onChange={handleChange}
+                        placeholder="Select role..."
+                        options={["Employee", "Manager"]}
+                    />
 
-                <Input
-                    label="Confirm Password"
-                    name="confirmPassword"
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    placeholder="Enter password again..."
-                />
+                    <Input
+                        label="Password"
+                        name="password"
+                        type="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        placeholder="Enter password..."
+                    />
 
-                <button type="submit" disabled={loading}>
-                    {loading ? "Registering..." : "Register"}
-                </button>
-            </form>
+                    <Input
+                        label="Confirm Password"
+                        name="confirmPassword"
+                        type="password"
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        placeholder="Enter password again..."
+                    />
 
-            {error && <p style={{ color: "red" }}>{error}</p>}
+                    <button type="submit" disabled={loading} className="registerButton">
+                        {loading ? "Registering..." : "Register"}
+                    </button>
+                </form>
 
-            {success && <p style={{ color: "lightgreen" }}>{success}</p>}
+                {error && <p style={{ color: "red" }}>{error}</p>}
+
+                {success && <p style={{ color: "lightgreen" }}>{success}</p>}
+            </div>
         </div>
     );
 }

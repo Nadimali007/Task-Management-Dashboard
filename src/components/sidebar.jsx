@@ -21,6 +21,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 
 const mainNavItems = [
@@ -39,35 +40,37 @@ const footerNavItems = [
 
 export default function AppSidebar() {
   return (
-    <Sidebar >
-      <SidebarHeader >
-        <div >
-          <span >
-            TaskMaster Pro
-          </span>
+    <Sidebar className="bg-black border-r border-gray-800 text-white">
+      <SidebarHeader className="flex flex-row items-center justify-between bg-black border-b border-gray-800 px-6 py-6">
+  <div>
+    <span className="text-2xl font-bold text-white">
+      TaskMaster Pro
+    </span>
 
-          <span >
-            Enterprise SaaS
-          </span>
-        </div>
-      </SidebarHeader>
+    <p className="text-sm text-gray-400">
+      Enterprise SaaS
+    </p>
+  </div>
+</SidebarHeader>
 
-      <SidebarContent >
+      <SidebarContent className="bg-black px-3 py-4">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu >
+            <SidebarMenu className="space-y-2">
               {mainNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
-                    
+                    className="rounded-lg hover:bg-gray-800 transition-all duration-200"
                   >
                     <Link
                       to={item.url}
-                    
+                      className="flex items-center gap-4 px-4 py-3 text-gray-200 hover:text-white"
                     >
-                      <item.icon  />
-                      <span>{item.title}</span>
+                      <item.icon className="h-5 w-5 shrink-0" />
+                      <span className="font-medium">
+                        {item.title}
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -77,19 +80,22 @@ export default function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter >
-        <SidebarMenu >
+      <SidebarFooter className="bg-black border-t border-gray-800 px-3 py-4">
+        <SidebarMenu className="space-y-2">
           {footerNavItems.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
                 asChild
-                
+                className="rounded-lg hover:bg-gray-800 transition-all duration-200"
               >
                 <Link
                   to={item.url}
+                  className="flex items-center gap-4 px-4 py-3 text-gray-200 hover:text-white"
                 >
-                  <item.icon  />
-                  <span>{item.title}</span>
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  <span className="font-medium">
+                    {item.title}
+                  </span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

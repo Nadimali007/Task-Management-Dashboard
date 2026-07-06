@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation  , useNavigate } from "react-router-dom";
-import Input from "../components/input";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/input";
 import { getUsers, resetPassword } from "../services/authservices";
-
+import { ArrowRight } from "lucide-react";
+import "../css/login.css";
 function Login() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -98,16 +99,16 @@ function Login() {
         setLoggedInUser(user);
         setSuccess(`Login successful! Welcome ${user.name}.`);
 
-        
+
 
         setTimeout(() => {
-                navigate("/dashboard", {
-                    state: {
-                        registered: true,
-                        UserID: user.id,
-                    },
-                });
-            }, 2000);
+          navigate("/dashboard", {
+            state: {
+              registered: true,
+              UserID: user.id,
+            },
+          });
+        }, 2000);
       }
       else {
         setError("Invalid email or password");
@@ -167,118 +168,126 @@ function Login() {
     }, 3000);
   };
 
+
+
   return (
-    <div className="login-container">
+    <div className="login-page">
+      <div className="login-container">
 
-      {showLoginForm && (
-        <>
-          <h2>Login to System</h2>
+        {showLoginForm && (
+          <>
+            <h4>TaskMasterPro</h4>
 
-          <p>
-            Please enter your login information or{" "}
-            <Link to="/register">register</Link> if you don't have an account.
-          </p>
+            <h3>ENTERPRISE SAAS WORKSPACE</h3>
 
-          <form onSubmit={handleSubmit}>
-            <Input
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Enter email..."
-            />
-
-            <Input
-              label="Password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Enter password..."
-            />
-
-            <div className="remember-me">
-              <input
-                id="rememberMe"
-                type="checkbox"
-                name="rememberMe"
-                checked={formData.rememberMe}
+            <form onSubmit={handleSubmit}>
+              <label htmlFor="Email">Email</label>
+              <Input
+                label="Email"
+                name="email"
+                type="email"
+                value={formData.email}
                 onChange={handleChange}
+                placeholder="Enter email..."
               />
-              <label htmlFor="rememberMe">Remember Me</label>
-            </div>
+              <label htmlFor="password">Password</label>
+              <Input
+                label="Password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Enter password..."
+              />
 
-            <button type="submit" disabled={loading}>
-              {loading ? "Logging in..." : "Login"}
-            </button>
-          </form>
+              <div className="remember-me">
+                <input
+                  id="rememberMe"
+                  type="checkbox"
+                  name="rememberMe"
+                  checked={formData.rememberMe}
+                  onChange={handleChange}
+                />
+                <label htmlFor="rememberMe">Remember Me</label>
+              </div>
 
-          {showForgotLink && (
-            <p
-              style={{
-                marginTop: "15px",
-                color: "#2563eb",
-                cursor: "pointer",
-                textDecoration: "underline",
-              }}
-              onClick={() => {
-                setShowLoginForm(false);
+              <button type="submit" disabled={loading} className="loginButton">
+                {loading ? "Signing in..." : "Signin"}
+                <ArrowRight className="Arrow" />
+              </button>
 
-                setTimeout(() => {
-                  setShowForgotPassword(true);
-                }, 300);
-              }}
+              <Link to="/register" className="newaccountButton">
+                New Account
+              </Link>
+            </form>
+
+
+            {showForgotLink && (
+              <p
+                style={{
+                  marginTop: "15px",
+                  color: "#2563eb",
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                }}
+                onClick={() => {
+                  setShowLoginForm(false);
+
+                  setTimeout(() => {
+                    setShowForgotPassword(true);
+                  }, 300);
+                }}
+              >
+                Forgot Password?
+              </p>
+            )}
+          </>
+        )}
+
+        {showForgotPassword && (
+          <>
+            <h2>Reset Password</h2>
+
+            <form
+              onSubmit={handleForgotPassword}
+              className="forgot-password-form"
             >
-              Forgot Password?
-            </p>
-          )}
-        </>
-      )}
+              <Input
+                label="Registered Email"
+                type="email"
+                value={formData.email}
+                disabled
+              />
 
-      {showForgotPassword && (
-        <>
-          <h2>Reset Password</h2>
+              <Input
+                label="New Password"
+                name="password"
+                type="password"
+                value={forgotData.password}
+                onChange={handleForgotChange}
+                placeholder="Enter new password"
+              />
 
-          <form
-            onSubmit={handleForgotPassword}
-            className="forgot-password-form"
-          >
-            <Input
-              label="Registered Email"
-              type="email"
-              value={formData.email}
-              disabled
-            />
+              <Input
+                label="Confirm Password"
+                name="confirmPassword"
+                type="password"
+                value={forgotData.confirmPassword}
+                onChange={handleForgotChange}
+                placeholder="Confirm new password"
+              />
 
-            <Input
-              label="New Password"
-              name="password"
-              type="password"
-              value={forgotData.password}
-              onChange={handleForgotChange}
-              placeholder="Enter new password"
-            />
+              <button type="submit">
+                Reset Password
+              </button>
+            </form>
+          </>
+        )}
 
-            <Input
-              label="Confirm Password"
-              name="confirmPassword"
-              type="password"
-              value={forgotData.confirmPassword}
-              onChange={handleForgotChange}
-              placeholder="Confirm new password"
-            />
+        {error && <p style={{ color: "red" }}>{error}</p>}
+        {success && <p style={{ color: "lightgreen" }}>{success}</p>}
 
-            <button type="submit">
-              Reset Password
-            </button>
-          </form>
-        </>
-      )}
-
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {success && <p style={{ color: "lightgreen" }}>{success}</p>}
-
+      </div>
     </div>
   );
 }
