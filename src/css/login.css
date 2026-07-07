@@ -28,14 +28,30 @@ body,
     max-width: 420px;
     color: white;
     display: flex;
+    justify-content: center;
+    align-items: center;
     flex-direction: column;
     animation: slideIn 0.8s ease;
     border-radius: 14px;
-    background: linear-gradient(to bottom,
-            rgb(12, 12, 12),
-            rgba(79, 70, 229, 0.35));
+    background: linear-gradient(
+        to bottom,
+        rgb(12, 12, 12),
+        rgba(79, 70, 229, 0.35)
+    );
     border: 1px solid rgba(99, 102, 241, 0.25);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.formtopimage {
+    background-color: #4f46e5;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 5px;
+    color: #d1d5db;
+    margin-top: 15px;
 }
 
 @keyframes slideIn {
@@ -51,14 +67,14 @@ body,
 }
 
 .login-container h4 {
-
     color: #ffffff;
     text-align: center;
+    margin-top: 10px;
     margin-bottom: 10px;
     font-weight: 700;
 }
 
-.login-container>h3 {
+.login-container > h3 {
     display: flex;
     justify-content: center;
     text-align: center;
@@ -75,15 +91,14 @@ body,
     text-decoration: underline;
 }
 
-form {
+.login-container form {
     width: 100%;
     display: flex;
     flex-direction: column;
     padding: 30px;
-
 }
 
-label {
+.login-container label {
     color: white;
     font-size: 15px;
     font-weight: 600;
@@ -91,7 +106,8 @@ label {
 }
 
 input[type="email"],
-input[type="password"] {
+input[type="password"],
+input[type="text"] {
     width: 100%;
     padding: 12px;
     margin-bottom: 18px;
@@ -100,12 +116,49 @@ input[type="password"] {
     border-radius: 8px;
     color: white;
     outline: none;
-    transition: .3s;
+    transition: 0.3s;
 }
 
 input[type="email"]:focus,
-input[type="password"]:focus {
+input[type="password"]:focus,
+input[type="text"]:focus {
     border-color: #6366f1;
+}
+.password-field {
+    position: relative;
+    width: 100%;
+}
+
+.password-input {
+    padding-right: 45px !important;
+}
+
+.eye-button {
+    position: absolute;
+    top: 35%;
+    right: 14px;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    cursor: pointer;
+    z-index: 100;
+}
+
+.eye-button:hover {
+    color: white;
+}
+
+.eye-button svg {
+    width: 20px;
+    height: 20px;
 }
 
 .remember-me {
@@ -125,13 +178,13 @@ input[type="password"]:focus {
     font-weight: 400;
 }
 
-button {
+.login-container .loginButton {
     width: 100%;
     padding: 12px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    transition: .3s;
+    transition: 0.3s;
 }
 
 .loginButton {
@@ -143,15 +196,35 @@ button {
     align-items: center;
 }
 
+.ResetPassowrdButton
+{
+     background: linear-gradient(90deg, #6d28d9, #4f46e5);
+    color: white;
+    font-size: 1.2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.ResetPassowrdButton:hover
+{
+    transform: translateY(-2px);
+}
+
+.loginButton:hover {
+    transform: translateY(-2px);
+}
+
 .newaccountButton {
     width: 100%;
     margin-top: 10px;
     background-color: transparent;
-    border:1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.5);
     color: white !important;
     padding: 12px;
     cursor: pointer;
-    transition: .3s;
+    text-decoration: none;
+    transition: 0.3s;
     border-radius: 8px;
     font-size: 1.2rem;
     display: flex;
@@ -163,12 +236,8 @@ button {
     margin-left: 10px;
 }
 
-.loginButton:hover {
-    transform: translateY(-2px);
-}
-
 .forgot-password-form {
-    animation: slideIn .5s ease;
+    animation: slideIn 0.5s ease;
 }
 
 .logout-button {
@@ -198,7 +267,16 @@ button {
         font-size: 1.8rem;
     }
 
-    form {
+    .form.login-container form {
         padding: 20px;
+    }
+
+    .eye-button {
+        right: 10px;
+    }
+
+    .eye-button svg {
+        width: 18px;
+        height: 18px;
     }
 }

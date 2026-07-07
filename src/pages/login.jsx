@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { getUsers, resetPassword } from "../services/authservices";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ClipboardList, Eye, EyeOff } from "lucide-react";
 import "../css/login.css";
 function Login() {
   const location = useLocation();
@@ -16,6 +16,7 @@ function Login() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showForgotLink, setShowForgotLink] = useState(false);
   const [forgotData, setForgotData] = useState({ password: "", confirmPassword: "", });
+  const [hidepassword, sethidepassword] = useState(false);
 
   useEffect(() => {
     if (location.state?.registered) {
@@ -99,13 +100,16 @@ function Login() {
         setLoggedInUser(user);
         setSuccess(`Login successful! Welcome ${user.name}.`);
 
-
+        console.log(user);
+        console.log(user.id);
+        console.log(user.name);
 
         setTimeout(() => {
           navigate("/dashboard", {
             state: {
               registered: true,
               UserID: user.id,
+              name: user.name,
             },
           });
         }, 2000);
@@ -168,7 +172,9 @@ function Login() {
     }, 3000);
   };
 
-
+  const showhidepassword = () => {
+    sethidepassword((prev) => !prev);
+  };
 
   return (
     <div className="login-page">
@@ -176,6 +182,7 @@ function Login() {
 
         {showLoginForm && (
           <>
+            <div className="formtopimage"><ClipboardList /></div>
             <h4>TaskMasterPro</h4>
 
             <h3>ENTERPRISE SAAS WORKSPACE</h3>
@@ -191,15 +198,26 @@ function Login() {
                 placeholder="Enter email..."
               />
               <label htmlFor="password">Password</label>
-              <Input
-                label="Password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Enter password..."
-              />
+              <div className="password-field">
+                <Input
+                  id="password"
+                  name="password"
+                  type={hidepassword ? "password" : "text"}
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Enter password..."
+                  className="password-input"
+                />
 
+                <button
+                  type="button"
+                  className="eye-button"
+                  onClick={showhidepassword}
+                  aria-label={hidepassword ? "Show password" : "Hide password"}
+                >
+                  {hidepassword ? <Eye size={20} /> : <EyeOff size={20} />}
+                </button>
+              </div>
               <div className="remember-me">
                 <input
                   id="rememberMe"
@@ -277,7 +295,7 @@ function Login() {
                 placeholder="Confirm new password"
               />
 
-              <button type="submit">
+              <button type="submit" className="ResetPassowrdButton">
                 Reset Password
               </button>
             </form>
