@@ -4,9 +4,11 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/sidebar";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, FolderArchive, CheckCircle, Hourglass, AlertCircle, Eye } from "lucide-react";
-import { addtasks, gettasks ,statusupdate} from "@/services/taskservices";
+import { addtasks, gettasks, statusupdate } from "@/services/taskservices";
 import Performancechart from "@/components/performancechart";
 import '../css/dashboard.css';
+import { useDispatch, useSelector } from "react-redux";
+import { addActivity } from "@/redux/activitySlice";
 
 function Dashboard() {
   const [openTaskEntry, setOpenTaskEntry] = useState(false);
@@ -17,9 +19,15 @@ function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [viewtask, setviewtask] = useState(false);
 
-  const location = useLocation();
+  const dispatch = useDispatch();
+  const recentactivities = useSelector((state) => state.activity.logs);
 
-  const currentUserId = location.state?.UserID || location.state?.userId;
+  const location = useLocation();
+  const currentUserId = location.state?.UserID || location.state?.userId || sessionStorage.getItem("currentUserId");
+
+  if ((location.state?.UserID || location.state?.userId) && !sessionStorage.getItem("currentUserId")) {
+    sessionStorage.setItem("currentUserId", location.state?.UserID || location.state?.userId);
+  }
 
   const fetchTasks = async () => {
     if (currentUserId) {
@@ -60,20 +68,24 @@ function Dashboard() {
   };
 
   const handlestatus = async (taskId) => {
-  try {
-    setTasks(prevTasks => 
-      prevTasks.map(task => 
-        (task.id === taskId || task._id === taskId) ? { ...task, status: "Completed" } : task
-      )
-    );
+    try {
+      const targetTask = tasks.find(t => (t.id === taskId || t._id === taskId));
 
-    await statusupdate(taskId);
-    
-    await fetchTasks();
-  } catch (error) {
-    console.error("Failed to update task status on the server:", error);
-  }
-};
+      setTasks(prevTasks =>
+        prevTasks.map(task =>
+          (task.id === taskId || task._id === taskId) ? { ...task, status: "Completed" } : task
+        )
+      );
+
+      await statusupdate(taskId);
+
+      dispatch(addActivity(" Task Completed "));
+
+      await fetchTasks();
+    } catch (error) {
+      console.error("Failed to update task status on the server:", error);
+    }
+  };
 
   const handleSubmitTask = async (e) => {
     e.preventDefault();
@@ -96,6 +108,8 @@ function Dashboard() {
       await addtasks(newTask);
       await fetchTasks();
 
+      dispatch(addActivity("Task Created"));
+
       setTaskName("");
       setTaskDescription("");
       setIssueDate("");
@@ -106,28 +120,29 @@ function Dashboard() {
     }
   };
 
+  console.log("Recent activity from Redux: ", recentactivities);
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full relative">
         <AppSidebar className=" m-5 p-5" />
 
-        <main className="flex-1 bg-slate-50 dark:bg-zinc-900">
-          <header className="sticky top-0 z-50 flex items-center p-4">
+        <main className="flex-1 bg-slate-50 dark:bg-zinc-900 pt-[60px]">
+          <header className="dashboard-header">
             <SidebarTrigger className="md:hidden" />
+            <div className="search-container-header">
+              <Search className="search-icon" />
+              <Input
+                type="search"
+                placeholder="Search Tasks, docs or people"
+                className="search-input"
+              />
+            </div>
           </header>
-
-          <div className="search-container">
-            <Search className="search-icon" />
-            <Input
-              type="search"
-              placeholder="Search Tasks, docs or people"
-              className="search-input"
-            />
-          </div>
 
           <div className="welcomdiv">
             <h2>Good Morning {name} </h2>
-            <p>You have {pendingTasksCount} pending and an upcoming meeting in 30 minutes.Let's make this day productive.</p>
+            <p>You have {pendingTasksCount} pending and an upcoming meeting in 30 minutes. Let's make this day productive.</p>
             <div className="taskbuttons">
               <button className="createtask" onClick={handleTaskCreation}>
                 <Plus /> Create Task
@@ -151,7 +166,17 @@ function Dashboard() {
           </div>
 
           <div className="lowerdata">
-            <Performancechart className=" mychart" /> <div className="recentactvities">Myrecent activities</div>
+            <Performancechart className=" mychart" tasks={tasks} />
+            <div className="recentactvities">
+              <h3>Recent Activities</h3>
+              {recentactivities.length === 0 ? (
+                <div className="activity" style={{ opacity: 0.5 }}>No recent activities</div>
+              ) : (
+                recentactivities.map((activity, index) => (
+                  <div key={index} className="activity">{activity}</div>
+                ))
+              )}
+            </div>
           </div>
 
         </main>
@@ -170,41 +195,33 @@ function Dashboard() {
                 <p className="no-tasks-message">No tasks assigned to you yet.</p>
               ) : (
                 <div className="modal-tasks-list">
-                  {tasks.length === 0 ? (
-                    <p className="no-tasks-message">No tasks assigned to you yet.</p>
-                  ) : (
-                    <div className="modal-tasks-list">
-                      {tasks.map((task) => {
-                        const taskId = task.id || task._id;
-                        return (
-                          <div key={taskId} className="modal-task-item">
+                  {tasks.map((task) => {
+                    const taskId = task.id || task._id;
+                    return (
+                      <div key={taskId} className="modal-task-item">
+                        {task.status !== "Completed" && (
+                          <button
+                            onClick={() => handlestatus(taskId)}
+                            className="createtask"
+                            style={{ margin: "0 12px 0 0", padding: "6px 12px", fontSize: "13px" }}
+                          >
+                            Complete
+                          </button>
+                        )}
 
-                            {task.status !== "Completed" && (
-                              <button
-                                onClick={() => handlestatus(taskId)}
-                                className="createtask"
-                                style={{ margin: "0 12px 0 0", padding: "6px 12px", fontSize: "13px" }}
-                              >
-                                Complete
-                              </button>
-                            )}
-
-                            <div className="task-info">
-                              <h4 style={{ textDecoration: task.status === "Completed" ? "line-through" : "none", opacity: task.status === "Completed" ? 0.6 : 1 }}>
-                                {task.title}
-                              </h4>
-                              <p>{task.description}</p>
-                              <span className="task-date">Due: {task.finaldate}</span>
-                               <span className="status-badge">
-                              {task.status}
-                            </span>
-                            </div>
-
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                        <div className="task-info">
+                          <h4 style={{ textDecoration: task.status === "Completed" ? "line-through" : "none", opacity: task.status === "Completed" ? 0.6 : 1 }}>
+                            {task.title}
+                          </h4>
+                          <p>{task.description}</p>
+                          <span className="task-date">Due: {task.finaldate}</span>
+                          <span className="status-badge">
+                            {task.status}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

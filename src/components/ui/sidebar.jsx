@@ -52,8 +52,6 @@ function SidebarProvider({
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
 
-  // This is the internal state of the sidebar.
-  // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen)
   const open = openProp ?? _open
   const setOpen = React.useCallback((value) => {
@@ -63,17 +61,13 @@ function SidebarProvider({
     } else {
       _setOpen(openState)
     }
-
-    // This sets the cookie to keep the sidebar state.
     document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
   }, [setOpenProp, open])
 
-  // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
     return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
   }, [isMobile, setOpen, setOpenMobile])
 
-  // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
     const handleKeyDown = (event) => {
       if (
@@ -89,8 +83,6 @@ function SidebarProvider({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [toggleSidebar])
 
-  // We add a state so that we can do data-state="expanded" or "collapsed".
-  // This makes it easier to style the sidebar with Tailwind classes.
   const state = open ? "expanded" : "collapsed"
 
   const contextValue = React.useMemo(() => ({
@@ -141,7 +133,7 @@ function Sidebar({
       <div
         data-slot="sidebar"
         className={cn(
-          "flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground p-5",
+          "flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground",
           className
         )}
         {...props}>
@@ -183,7 +175,6 @@ function Sidebar({
       data-variant={variant}
       data-side={side}
       data-slot="sidebar">
-      {/* This is what handles the sidebar gap on desktop */}
       <div
         data-slot="sidebar-gap"
         className={cn(
@@ -199,7 +190,6 @@ function Sidebar({
         data-side={side}
         className={cn(
           "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
-          // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
@@ -226,23 +216,23 @@ function SidebarTrigger({
 
   return (
     <Button
-  data-sidebar="trigger"
-  data-slot="sidebar-trigger"
-  variant="ghost"
-  size="icon-sm"
-  className={cn(
-    "bg-transparent border-0 shadow-none hover:bg-gray-200 dark:hover:bg-zinc-800",
-    className
-  )}
-  onClick={(event) => {
-    onClick?.(event)
-    toggleSidebar()
-  }}
-  {...props}
->
-  <Menu className="h-6 w-6" />
-  <span className="sr-only">Toggle Sidebar</span>
-</Button>
+      data-sidebar="trigger"
+      data-slot="sidebar-trigger"
+      variant="ghost"
+      size="icon-sm"
+      className={cn(
+        "bg-transparent border-0 shadow-none hover:bg-gray-200 dark:hover:bg-zinc-800",
+        className
+      )}
+      onClick={(event) => {
+        onClick?.(event)
+        toggleSidebar()
+      }}
+      {...props}
+    >
+      <Menu className="h-6 w-6" />
+      <span className="sr-only">Toggle Sidebar</span>
+    </Button>
   );
 }
 
@@ -309,7 +299,7 @@ function SidebarHeader({
     <div
       data-slot="sidebar-header"
       data-sidebar="header"
-      className={cn("flex flex-col gap-2 p-2", className)}
+      className={cn("flex flex-col gap-2 p-4", className)} // Clean fallback padding defaults
       {...props} />
   );
 }
@@ -322,7 +312,7 @@ function SidebarFooter({
     <div
       data-slot="sidebar-footer"
       data-sidebar="footer"
-      className={cn("flex flex-col gap-2 p-2", className)}
+      className={cn("flex flex-col gap-2 p-4", className)}
       {...props} />
   );
 }
@@ -428,7 +418,7 @@ function SidebarMenu({
     <ul
       data-slot="sidebar-menu"
       data-sidebar="menu"
-      className={cn("flex w-full min-w-0 flex-col gap-0", className)}
+      className={cn("flex w-full min-w-0 flex-col gap-1", className)}
       {...props} />
   );
 }
@@ -456,8 +446,8 @@ const sidebarMenuButtonVariants = cva(
           "bg-background shadow-[0_0_0_1px_var(--sidebar-border)] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_var(--sidebar-accent)]",
       },
       size: {
-        default: "h-8 text-sm",
-        sm: "h-7 text-xs",
+        default: "h-10 text-sm", // Expanded default sizing to balance custom padding
+        sm: "h-8 text-xs",
         lg: "h-12 text-sm group-data-[collapsible=icon]:p-0!",
       },
     },
@@ -555,7 +545,6 @@ function SidebarMenuSkeleton({
   showIcon = false,
   ...props
 }) {
-  // Random width between 50 to 90%.
   const [width] = React.useState(() => {
     return `${Math.floor(Math.random() * 40) + 50}%`;
   })
