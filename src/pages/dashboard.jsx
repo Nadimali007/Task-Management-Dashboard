@@ -3,12 +3,10 @@ import { useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/sidebar";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, FolderArchive, CheckCircle, Hourglass, AlertCircle, Eye } from "lucide-react";
-import { addtasks, gettasks, statusupdate } from "@/services/taskservices";
+import { Search, Plus, FolderArchive, CheckCircle, Hourglass, AlertCircle, Check } from "lucide-react";
+import { addtasks, gettasks, recentactitivity, logActivity } from "@/services/taskservices";
 import Performancechart from "@/components/performancechart";
 import '../css/dashboard.css';
-import { useDispatch, useSelector } from "react-redux";
-import { addActivity } from "@/redux/activitySlice";
 
 function Dashboard() {
   const [openTaskEntry, setOpenTaskEntry] = useState(false);
@@ -17,24 +15,27 @@ function Dashboard() {
   const [issueDate, setIssueDate] = useState("");
   const [finalDate, setFinalDate] = useState("");
   const [tasks, setTasks] = useState([]);
-  const [viewtask, setviewtask] = useState(false);
-
-  const dispatch = useDispatch();
-  const recentactivities = useSelector((state) => state.activity.logs);
+  const [recentactivities, setRecentactivities] = useState([]);
 
   const location = useLocation();
-  const currentUserId = location.state?.UserID || location.state?.userId || sessionStorage.getItem("currentUserId");
+  const currentUserId = (() => {
+    if (location.state?.UserID) return location.state.UserID;
+    if (location.state?.userId) return location.state.userId;
+    
+    const sessionUser = JSON.parse(sessionStorage.getItem("user"));
+    if (sessionUser?.id) return sessionUser.id;
 
-  if ((location.state?.UserID || location.state?.userId) && !sessionStorage.getItem("currentUserId")) {
-    sessionStorage.setItem("currentUserId", location.state?.UserID || location.state?.userId);
-  }
+    const localUser = JSON.parse(localStorage.getItem("user"));
+    if (localUser?.id) return localUser.id;
+
+    return null;
+  })();
 
   const fetchTasks = async () => {
     if (currentUserId) {
       try {
-        console.log("Fetching tasks for User ID:", currentUserId);
         const data = await gettasks(currentUserId);
-        console.log("Data received from API:", data);
+        console.log("userlogin id for api call", currentUserId)
         setTasks(data || []);
       } catch (error) {
         console.error("Error fetching tasks:", error);
@@ -42,49 +43,54 @@ function Dashboard() {
     }
   };
 
-  useEffect(() => {
-    fetchTasks();
-  }, [currentUserId]);
+  const fetchActivities = async () => {
+    if (currentUserId) {
+      try {
+        const data = await recentactitivity(currentUserId);
 
+        const userLogs = data
+          .filter(log => String(log.userId) === String(currentUserId))
+          .reverse()
+          .slice(0, 8);
+
+        setRecentactivities(userLogs);
+      } catch (error) {
+        console.error("Error fetching activities:", error);
+      }
+    }
+  };
+
+  useEffect(() => {
+  fetchTasks();
+  fetchActivities();
+    if (currentUserId) {
+    sessionStorage.setItem("currentUserId", currentUserId);
+  }
+}, [currentUserId]);
+  
   const totalTasksCount = tasks.length;
   const completeTaskCounts = tasks.filter(task => task.status === "Completed").length;
-  const pendingTasksCount = tasks.filter(task => task.status === "Incomplete" || task.status === "Pending").length;
+  const pendingTasksCount = tasks.filter(task => task.status === "Incomplete" || task.status === "Pending" || task.status === "Todo" || task.status === "In Progress").length;
+  
+  // Helper to standardise task dates from timestamps to YYYY-MM-DD strings safely
+  const formatTaskDateString = (dateVal) => {
+    if (typeof dateVal === 'number') {
+      return new Date(dateVal * 1000).toISOString().split('T')[0];
+    }
+    return dateVal;
+  };
+
   const todayStr = new Date().toISOString().split('T')[0];
   const overdueTasksCount = tasks.filter(task => {
-    return (task.status === "Incomplete" || task.status === "Pending") && task.finaldate < todayStr;
+    const isUnfinished = task.status === "Incomplete" || task.status === "Pending" || task.status === "Todo" || task.status === "In Progress";
+    const taskFinalDateStr = formatTaskDateString(task.finaldate);
+    return isUnfinished && taskFinalDateStr < todayStr;
   }).length;
 
   const name = location.state?.name;
 
   const handleTaskCreation = () => {
     setOpenTaskEntry(true);
-  };
-
-  const handleviewtask = () => {
-    setviewtask(!viewtask);
-    if (!viewtask) {
-      fetchTasks();
-    }
-  };
-
-  const handlestatus = async (taskId) => {
-    try {
-      const targetTask = tasks.find(t => (t.id === taskId || t._id === taskId));
-
-      setTasks(prevTasks =>
-        prevTasks.map(task =>
-          (task.id === taskId || task._id === taskId) ? { ...task, status: "Completed" } : task
-        )
-      );
-
-      await statusupdate(taskId);
-
-      dispatch(addActivity(" Task Completed "));
-
-      await fetchTasks();
-    } catch (error) {
-      console.error("Failed to update task status on the server:", error);
-    }
   };
 
   const handleSubmitTask = async (e) => {
@@ -100,15 +106,16 @@ function Dashboard() {
       description: taskDescription,
       issuedate: issueDate,
       finaldate: finalDate,
-      status: "Incomplete",
+      status: "Todo",
       userId: currentUserId || null,
     };
 
     try {
       await addtasks(newTask);
-      await fetchTasks();
+      await logActivity(currentUserId, "Task Created", taskName);
 
-      dispatch(addActivity("Task Created"));
+      await fetchTasks();
+      await fetchActivities();
 
       setTaskName("");
       setTaskDescription("");
@@ -120,7 +127,12 @@ function Dashboard() {
     }
   };
 
-  console.log("Recent activity from Redux: ", recentactivities);
+  // Pre-format task data before supplying it down into the chart
+  const formattedTasksForChart = tasks.map(task => ({
+    ...task,
+    issuedate: formatTaskDateString(task.issuedate),
+    finaldate: formatTaskDateString(task.finaldate)
+  }));
 
   return (
     <SidebarProvider>
@@ -148,85 +160,90 @@ function Dashboard() {
                 <Plus /> Create Task
               </button>
               <button className="viewschedule">View Schedule</button>
-              <button className="createtask" onClick={handleviewtask}>
-                <Eye /> {viewtask ? "Hide Tasks" : "View Task"}
-              </button>
             </div>
           </div>
 
           <div className="tasksdiv">
-            <div className="totaltasks"><div className="upersubdiv"><div className="image"><FolderArchive /></div> <span>12%</span></div>
-              <p >TOTAL TASKS</p><div className="count">{totalTasksCount}</div></div>
-            <div className="completetasks"><div className="upersubdiv"><div className="image"><CheckCircle /> </div><span>{completeTaskCounts}/{totalTasksCount}</span></div>
-              <p>COMPLETED</p><div className="count">{completeTaskCounts}</div></div>
-            <div className="pendingtasks"><div className="upersubdiv"><div className="image"><Hourglass /> </div><span>{pendingTasksCount} Left</span></div>
-              <p>PENDING</p><div className="count">{pendingTasksCount}</div></div>
-            <div className="overduetasks"><div className="upersubdiv"><div className="image"><AlertCircle /> </div><span>critical</span></div>
-              <p>OVERDUE</p><div className="count">{overdueTasksCount}</div></div>
+            <div className="totaltasks">
+              <div className="upersubdiv">
+                <div className="image"><FolderArchive /></div>
+                <span>12%</span>
+              </div>
+              <p>TOTAL TASKS</p>
+              <div className="count">{totalTasksCount}</div>
+            </div>
+            <div className="completetasks">
+              <div className="upersubdiv">
+                <div className="image"><CheckCircle /></div>
+                <span>{completeTaskCounts}/{totalTasksCount}</span>
+              </div>
+              <p>COMPLETED</p>
+              <div className="count">{completeTaskCounts}</div>
+            </div>
+            <div className="pendingtasks">
+              <div className="upersubdiv">
+                <div className="image"><Hourglass /></div>
+                <span>{pendingTasksCount} Left</span>
+              </div>
+              <p>PENDING</p>
+              <div className="count">{pendingTasksCount}</div>
+            </div>
+            <div className="overduetasks">
+              <div className="upersubdiv">
+                <div className="image"><AlertCircle /></div>
+                <span>critical</span>
+              </div>
+              <p>OVERDUE</p>
+              <div className="count">{overdueTasksCount}</div>
+            </div>
           </div>
 
           <div className="lowerdata">
-            <Performancechart className=" mychart" tasks={tasks} />
+            <Performancechart className=" mychart" tasks={formattedTasksForChart} />
             <div className="recentactvities">
-              <h3>Recent Activities</h3>
-              {recentactivities.length === 0 ? (
-                <div className="activity" style={{ opacity: 0.5 }}>No recent activities</div>
-              ) : (
-                recentactivities.map((activity, index) => (
-                  <div key={index} className="activity">{activity}</div>
-                ))
-              )}
-            </div>
-          </div>
+              <h2>Recent Activity</h2>
+              <div className="activities-list">
+                {recentactivities.length > 0 ? (
+                  recentactivities.map((activity) => {
+                    const isCompleted = activity.type === "task_completed" || activity.title?.toLowerCase().includes("complete");
+                    const iconClass = isCompleted ? "icon-completed" : "icon-created";
+                    const dateValue = activity.createDate || activity.createdAt;
 
-        </main>
-
-        {viewtask && (
-          <div className="taskformdiv">
-            <div className="task-view-modal">
-              <div className="modal-header">
-                <h3>My Tasks</h3>
-                <button className="close-modal-btn" onClick={() => setviewtask(false)}>
-                  ✕
-                </button>
-              </div>
-
-              {tasks.length === 0 ? (
-                <p className="no-tasks-message">No tasks assigned to you yet.</p>
-              ) : (
-                <div className="modal-tasks-list">
-                  {tasks.map((task) => {
-                    const taskId = task.id || task._id;
                     return (
-                      <div key={taskId} className="modal-task-item">
-                        {task.status !== "Completed" && (
-                          <button
-                            onClick={() => handlestatus(taskId)}
-                            className="createtask"
-                            style={{ margin: "0 12px 0 0", padding: "6px 12px", fontSize: "13px" }}
-                          >
-                            Complete
-                          </button>
-                        )}
-
-                        <div className="task-info">
-                          <h4 style={{ textDecoration: task.status === "Completed" ? "line-through" : "none", opacity: task.status === "Completed" ? 0.6 : 1 }}>
-                            {task.title}
-                          </h4>
-                          <p>{task.description}</p>
-                          <span className="task-date">Due: {task.finaldate}</span>
-                          <span className="status-badge">
-                            {task.status}
-                          </span>
+                      <div key={activity.id} className="activity-item">
+                        <div className={`activity-icon-wrapper ${iconClass}`}>
+                          {isCompleted ? (
+                            <Check size={16} strokeWidth={3} />
+                          ) : (
+                            <Plus size={16} strokeWidth={3} />
+                          )}
+                        </div>
+                        <div className="activity-content">
+                          <span className="activity-title">{activity.title}</span>
+                          <span className="activity-description">{activity.description}</span>
+                          {dateValue && (
+                            <span className="activity-time">
+                              {new Date(dateValue).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(dateValue).toLocaleDateString()}
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
-                  })}
-                </div>
-              )}
+                  })
+                ) : (
+                  <div className="no-activity-placeholder">No recent activity</div>
+                )}
+              </div>
             </div>
           </div>
-        )}
+
+          <div className="focustasks">
+            <div className="headerrow">
+              <h4>Focus Tasks</h4>
+              <p>Filter</p>
+            </div>
+          </div>
+        </main>
 
         {openTaskEntry && (
           <div className="taskformdiv">
@@ -242,7 +259,7 @@ function Dashboard() {
                     onChange={(e) => setTaskName(e.target.value)}
                     placeholder="Enter task name"
                     required
-                    className='inputfield'
+                    className="inputfield"
                   />
                 </div>
 

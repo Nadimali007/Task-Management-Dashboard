@@ -1,4 +1,4 @@
-import api from "../api/axios";
+import api from "../api/dataapi";
 
 export const getUsers = async () => {
   const res = await api.get("/users");
