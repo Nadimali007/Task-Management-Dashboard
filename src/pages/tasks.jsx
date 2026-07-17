@@ -9,17 +9,15 @@ import '../css/tasks.css';
 function Tasks() {
   const [tasks, setTasks] = useState([]);
   const [userId, setUserId] = useState(null);
+  const [teamId, setTeamId] = useState(null);
 
   useEffect(() => {
-    // 1. Always prioritize the strict "currentUserId" set by the dashboard first
     let storedId = sessionStorage.getItem("currentUserId") || localStorage.getItem("currentUserId");
                      
-    // 2. Fallback to raw string IDs if the top ones don't exist
     if (!storedId) {
       storedId = sessionStorage.getItem("userId") || localStorage.getItem("userId");
     }
 
-    // 3. Fallback to checking serialized user objects only if no direct ID was found
     if (!storedId) {
       const sessionUser = sessionStorage.getItem("user") || localStorage.getItem("user");
       if (sessionUser) {
@@ -28,13 +26,15 @@ function Tasks() {
           if (parsed.id || parsed._id) {
             storedId = parsed.id || parsed._id;
           }
+          if (parsed.teamId) {
+            setTeamId(String(parsed.teamId));
+          }
         } catch (e) {
           console.error("Error parsing user object from storage", e);
         }
       }
     }
 
-    // Set the correctly resolved, fresh ID
     if (storedId) {
       setUserId(String(storedId));
     }
@@ -45,11 +45,25 @@ function Tasks() {
     
     console.log("Logged in ID in TaskPage: ", userId);
     try {
-      const data = await gettasks(userId);
+      const data = await gettasks(userId) || [];
       
-      // Filter the tasks on the client side just in case the API returns all tasks
-      const filteredTasks = (data || []).filter(task => String(task.userId) === String(userId));
-      setTasks(filteredTasks);
+      let activeTeamId = teamId;
+
+      if (!activeTeamId) {
+        const currentUserTask = data.find(task => String(task.userId) === String(userId));
+        if (currentUserTask?.teamId) {
+          activeTeamId = String(currentUserTask.teamId);
+          setTeamId(activeTeamId); 
+        }
+      }
+
+      if (activeTeamId) {
+        const teamTasks = data.filter(task => String(task.teamId) === String(activeTeamId));
+        setTasks(teamTasks);
+      } else {
+        const individualTasks = data.filter(task => String(task.userId) === String(userId));
+        setTasks(individualTasks);
+      }
     } catch (error) {
       console.error("Error fetching tasks:", error);
     }
@@ -59,7 +73,7 @@ function Tasks() {
     if (userId) {
       fetchUserTasks();
     }
-  }, [userId]);
+  }, [userId, teamId]); 
 
   const handlestatus = async (taskId) => {
     try {
@@ -80,7 +94,6 @@ function Tasks() {
     }
   };
 
-  // Helper to safely format or pass date strings cleanly
   const formatDisplayDate = (dateVal) => {
     if (typeof dateVal === 'number') {
       return new Date(dateVal * 1000).toLocaleDateString();
@@ -108,14 +121,14 @@ function Tasks() {
           <div className="tasks-container">
             <div className="tasks-header">
               <div>
-                <h2 className="tasks-title">My Tasks</h2>
-                <p className="tasks-subtitle">Manage and track your assigned work items</p>
+                <h2 className="tasks-title">Kanban Board</h2>
+                <p className="tasks-subtitle">Manage and track work items assigned across your group</p>
               </div>
             </div>
 
             {tasks.length === 0 ? (
               <div className="empty-tasks-state">
-                <p className="empty-tasks-message">No tasks assigned to you yet.</p>
+                <p className="empty-tasks-message">No tasks assigned to your team yet.</p>
               </div>
             ) : (
               <div className="tasks-grid">

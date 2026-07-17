@@ -75,15 +75,15 @@ export default function Performancechart({ className = "", tasks = [] }) {
             <div className="flex justify-between items-start mb-6">
                 <div>
                     <h3 className="text-white font-semibold text-sm tracking-wide">PRODUCTIVITY SUMMARY</h3>
-                    <p className="text-zinc-400 text-xs mt-1 mb-3">
+                    <p className="  text-zinc-400 text-xs mt-1 mb-3">
                         Your performance over the current {view === "week" ? "week" : "month"}
                     </p>
                 </div>
                 <div className="flex gap-4 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
                     <button
                         onClick={() => setView("week")}
-                        className={`inline-flex items-center justify-center px-3 py-1 text-xs font-medium cursor-pointer transition-all  ${view === "week"
-                            ? "bg-indigo-600 text-white shadow"
+                        className={`inline-flex !px-3 !py-1 !rounded-sm items-center justify-center px-3 py-1 text-xs font-medium cursor-pointer transition-all  ${view === "week"
+                            ? "bg-[#D2BBFF] text[#6260ff] shadow"
                             : "text-zinc-400 hover:text-white"
                             }`}
                     >
@@ -91,8 +91,8 @@ export default function Performancechart({ className = "", tasks = [] }) {
                     </button>
                     <button
                         onClick={() => setView("month")}
-                        className={`inline-flex items-center justify-center px-3 py-1 text-xs font-medium cursor-pointer transition-all  ${view === "month"
-                            ? "bg-indigo-600 text-white shadow"
+                        className={`inline-flex !px-3 !py-1 !rounded-sm items-center justify-center px-3 py-1 text-xs font-medium cursor-pointer transition-all  ${view === "month"
+                            ? "bg-[#D2BBFF] text[#6260ff] shadow"
                             : "text-zinc-400 hover:text-white"
                             }`}
                     >

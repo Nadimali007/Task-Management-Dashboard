@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/sidebar";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, FolderArchive, CheckCircle, Hourglass, AlertCircle, Check } from "lucide-react";
+import { Search, Plus, FolderArchive, CheckCircle, Hourglass, AlertCircle, Check, ListFilter } from "lucide-react";
 import { addtasks, gettasks, recentactitivity, logActivity } from "@/services/taskservices";
 import Performancechart from "@/components/performancechart";
 import '../css/dashboard.css';
@@ -14,14 +14,17 @@ function Dashboard() {
   const [taskDescription, setTaskDescription] = useState("");
   const [issueDate, setIssueDate] = useState("");
   const [finalDate, setFinalDate] = useState("");
+  const [priority, setpriority] = useState("");
   const [tasks, setTasks] = useState([]);
   const [recentactivities, setRecentactivities] = useState([]);
+  const [filterPriority, setFilterPriority] = useState("All");
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   const location = useLocation();
   const currentUserId = (() => {
     if (location.state?.UserID) return location.state.UserID;
     if (location.state?.userId) return location.state.userId;
-    
+
     const sessionUser = JSON.parse(sessionStorage.getItem("user"));
     if (sessionUser?.id) return sessionUser.id;
 
@@ -31,11 +34,25 @@ function Dashboard() {
     return null;
   })();
 
+  const name = (() => {
+    if (location.state?.name) return location.state.name;
+    if (location.state?.name) return location.state.name;
+
+    const sessionUser = JSON.parse(sessionStorage.getItem("user"));
+    if (sessionUser?.name) return sessionUser.name;
+
+    const localUser = JSON.parse(localStorage.getItem("user"));
+    if (localUser?.name) return localUser.name;
+
+    return null;
+  })();
+
   const fetchTasks = async () => {
     if (currentUserId) {
       try {
         const data = await gettasks(currentUserId);
         console.log("userlogin id for api call", currentUserId)
+        console.log("Name: ", name);
         setTasks(data || []);
       } catch (error) {
         console.error("Error fetching tasks:", error);
@@ -48,12 +65,24 @@ function Dashboard() {
       try {
         const data = await recentactitivity(currentUserId);
 
-        const userLogs = data
-          .filter(log => String(log.userId) === String(currentUserId))
-          .reverse()
-          .slice(0, 8);
+        const daysLimit = 3;
+        const cutoffTime = Date.now() - (daysLimit * 24 * 60 * 60 * 1000);
 
-        setRecentactivities(userLogs);
+        const userlogs = data
+          .filter(log => String(log.userId) === String(currentUserId))
+          .filter(log => {
+            const activitycreationDate = log.createDate || log.createdAt;
+            if (!activitycreationDate) return false;
+
+            const logTime = typeof activitycreationDate === 'number' && activitycreationDate < 10000000000
+              ? new Date(activitycreationDate * 1000).getTime()
+              : new Date(activitycreationDate).getTime();
+
+            return logTime >= cutoffTime;
+          })
+          .reverse();
+
+        setRecentactivities(userlogs);
       } catch (error) {
         console.error("Error fetching activities:", error);
       }
@@ -61,18 +90,17 @@ function Dashboard() {
   };
 
   useEffect(() => {
-  fetchTasks();
-  fetchActivities();
+    fetchTasks();
+    fetchActivities();
     if (currentUserId) {
-    sessionStorage.setItem("currentUserId", currentUserId);
-  }
-}, [currentUserId]);
-  
+      sessionStorage.setItem("currentUserId", currentUserId);
+    }
+  }, [currentUserId]);
+
   const totalTasksCount = tasks.length;
   const completeTaskCounts = tasks.filter(task => task.status === "Completed").length;
   const pendingTasksCount = tasks.filter(task => task.status === "Incomplete" || task.status === "Pending" || task.status === "Todo" || task.status === "In Progress").length;
-  
-  // Helper to standardise task dates from timestamps to YYYY-MM-DD strings safely
+
   const formatTaskDateString = (dateVal) => {
     if (typeof dateVal === 'number') {
       return new Date(dateVal * 1000).toISOString().split('T')[0];
@@ -86,8 +114,6 @@ function Dashboard() {
     const taskFinalDateStr = formatTaskDateString(task.finaldate);
     return isUnfinished && taskFinalDateStr < todayStr;
   }).length;
-
-  const name = location.state?.name;
 
   const handleTaskCreation = () => {
     setOpenTaskEntry(true);
@@ -106,7 +132,8 @@ function Dashboard() {
       description: taskDescription,
       issuedate: issueDate,
       finaldate: finalDate,
-      status: "Todo",
+      status: "Incomplete",
+      priority: priority,
       userId: currentUserId || null,
     };
 
@@ -121,18 +148,25 @@ function Dashboard() {
       setTaskDescription("");
       setIssueDate("");
       setFinalDate("");
+      setpriority("");
       setOpenTaskEntry(false);
     } catch (error) {
       console.error("Error creating task:", error);
     }
   };
 
-  // Pre-format task data before supplying it down into the chart
   const formattedTasksForChart = tasks.map(task => ({
     ...task,
     issuedate: formatTaskDateString(task.issuedate),
     finaldate: formatTaskDateString(task.finaldate)
   }));
+
+  const getFilteredTasks = () => {
+    if (filterPriority === "All") return tasks;
+    return tasks.filter(task => task.priority?.toLowerCase() === filterPriority.toLowerCase());
+  };
+
+  const filteredTasks = getFilteredTasks();
 
   return (
     <SidebarProvider>
@@ -239,10 +273,83 @@ function Dashboard() {
 
           <div className="focustasks">
             <div className="headerrow">
-              <h4>Focus Tasks</h4>
-              <p>Filter</p>
+              <h3>Focus Tasks</h3>
+              <div className="filter-container">
+                <div className="filter" onClick={() => setShowFilterDropdown(!showFilterDropdown)}>
+                  <ListFilter size={18} />
+                  <p>Filter</p>
+                </div>
+                {showFilterDropdown && (
+                  <div className="filter-dropdown" style={{ cursor: "pointer" }}>
+                    <div
+                      className={`filter-item ${filterPriority === "All" ? "active" : ""}`}
+                      onClick={() => { setFilterPriority("All"); setShowFilterDropdown(false); }}
+                    >
+                      All Tasks
+                    </div>
+                    <div
+                      className={`filter-item ${filterPriority === "Low" ? "active" : ""}`}
+                      onClick={() => { setFilterPriority("Low"); setShowFilterDropdown(false); }}
+                    >
+                      Low Priority
+                    </div>
+                    <div
+                      className={`filter-item ${filterPriority === "High" ? "active" : ""}`}
+                      onClick={() => { setFilterPriority("High"); setShowFilterDropdown(false); }}
+                    >
+                      High Priority
+                    </div>
+                    <div
+                      className={`filter-item ${filterPriority === "Critical" ? "active" : ""}`}
+                      onClick={() => { setFilterPriority("Critical"); setShowFilterDropdown(false); }}
+                    >
+                      Critical Priority
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <hr style={{ marginTop: "10px", borderColor: "rgb(48, 48, 48)" }} />
+            <div className="table-responsive">
+              <table className="task-table">
+                <thead>
+                  <tr>
+                    <th>Task Name</th>
+                    <th>Priority</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTasks.length > 0 ? (
+                    filteredTasks.map((task) => (
+                      <tr key={task.id}>
+                        <td>{task.title}</td>
+                        <td>
+                          <span className={`priority-${task.priority?.toLowerCase()}`}>
+                            {task.priority}
+                          </span>
+                        </td>
+                        <td>{formatTaskDateString(task.finaldate)}</td>
+                        <td>
+                          <span className={`status-${task.status?.toLowerCase().replace(/\s+/g, '')}`}>
+                            {task.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="4" className="no-tasks">
+                        {filterPriority !== "All" ? `No ${filterPriority} tasks available` : "No tasks available"}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
+
         </main>
 
         {openTaskEntry && (
@@ -293,6 +400,21 @@ function Dashboard() {
                     className="inputfield"
                     required
                   />
+                </div>
+
+                <div>
+                  <label>Priority</label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setpriority(e.target.value)}
+                    className="inputfield cursor-pointer"
+                    required
+                  >
+                    <option value="" disabled>Select Priority...</option>
+                    <option value="Low">Low</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                  </select>
                 </div>
 
                 <div className="buttons">

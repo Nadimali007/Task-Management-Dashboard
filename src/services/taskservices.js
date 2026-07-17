@@ -29,6 +29,11 @@ export const gettasks = async (userId) => {
   return res.data.filter(task => task.userId === String(userId));
 };
 
+export const getAllTasks = async () => {
+  const res = await api.get("/Tasks");
+  return res.data;
+};
+
 export const statusupdate = async (taskId) => {
   const res = await api.put(`/Tasks/${taskId}`, { status: "Completed" });
   return res.data; 
