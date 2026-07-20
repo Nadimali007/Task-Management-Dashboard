@@ -21,38 +21,65 @@ function Dashboard() {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   const location = useLocation();
+
+  // Get logged-in user ID and Name safely
   const currentUserId = (() => {
-    if (location.state?.UserID) return location.state.UserID;
-    if (location.state?.userId) return location.state.userId;
-
-    const sessionUser = JSON.parse(sessionStorage.getItem("user"));
-    if (sessionUser?.id) return sessionUser.id;
-
-    const localUser = JSON.parse(localStorage.getItem("user"));
-    if (localUser?.id) return localUser.id;
-
-    return null;
+    if (location.state?.UserID || location.state?.userId) {
+      return location.state.UserID || location.state.userId;
+    }
+    const sessionUser = JSON.parse(sessionStorage.getItem("user") || "{}");
+    const localUser = JSON.parse(localStorage.getItem("user") || "{}");
+    return sessionUser?.id || localUser?.id || null;
   })();
 
   const name = (() => {
     if (location.state?.name) return location.state.name;
-    if (location.state?.name) return location.state.name;
-
-    const sessionUser = JSON.parse(sessionStorage.getItem("user"));
-    if (sessionUser?.name) return sessionUser.name;
-
-    const localUser = JSON.parse(localStorage.getItem("user"));
-    if (localUser?.name) return localUser.name;
-
-    return null;
+    const sessionUser = JSON.parse(sessionStorage.getItem("user") || "{}");
+    const localUser = JSON.parse(localStorage.getItem("user") || "{}");
+    return sessionUser?.name || localUser?.name || "User";
   })();
+
+  // Utility: Format unix timestamps or ISO date strings to 'YYYY-MM-DD'
+  const formatTaskDateString = (dateVal) => {
+    if (!dateVal) return "";
+    if (typeof dateVal === 'number') {
+      return new Date(dateVal * 1000).toISOString().split('T')[0];
+    }
+    return dateVal;
+  };
+
+  // Utility: Calculate remaining or overdue days
+  const getRemainingDaysText = (finalDateVal, status) => {
+    if (status?.toLowerCase() === "completed") {
+      return "Completed";
+    }
+
+    const formattedDateStr = formatTaskDateString(finalDateVal);
+    if (!formattedDateStr) return "N/A";
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const targetDate = new Date(formattedDateStr);
+    targetDate.setHours(0, 0, 0, 0);
+
+    const diffTime = targetDate.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      const overdueDays = Math.abs(diffDays);
+      return `${overdueDays} ${overdueDays === 1 ? 'day' : 'days'} overdue`;
+    } else if (diffDays === 0) {
+      return "Due Today";
+    } else {
+      return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} remaining`;
+    }
+  };
 
   const fetchTasks = async () => {
     if (currentUserId) {
       try {
         const data = await gettasks(currentUserId);
-        console.log("userlogin id for api call", currentUserId)
-        console.log("Name: ", name);
         setTasks(data || []);
       } catch (error) {
         console.error("Error fetching tasks:", error);
@@ -64,20 +91,17 @@ function Dashboard() {
     if (currentUserId) {
       try {
         const data = await recentactitivity(currentUserId);
-
         const daysLimit = 3;
         const cutoffTime = Date.now() - (daysLimit * 24 * 60 * 60 * 1000);
 
-        const userlogs = data
+        const userlogs = (data || [])
           .filter(log => String(log.userId) === String(currentUserId))
           .filter(log => {
-            const activitycreationDate = log.createDate || log.createdAt;
-            if (!activitycreationDate) return false;
-
-            const logTime = typeof activitycreationDate === 'number' && activitycreationDate < 10000000000
-              ? new Date(activitycreationDate * 1000).getTime()
-              : new Date(activitycreationDate).getTime();
-
+            const dateVal = log.createDate || log.createdAt;
+            if (!dateVal) return false;
+            const logTime = typeof dateVal === 'number' && dateVal < 10000000000
+              ? dateVal * 1000
+              : new Date(dateVal).getTime();
             return logTime >= cutoffTime;
           })
           .reverse();
@@ -97,27 +121,19 @@ function Dashboard() {
     }
   }, [currentUserId]);
 
-  const totalTasksCount = tasks.length;
-  const completeTaskCounts = tasks.filter(task => task.status === "Completed").length;
-  const pendingTasksCount = tasks.filter(task => task.status === "Incomplete" || task.status === "Pending" || task.status === "Todo" || task.status === "In Progress").length;
-
-  const formatTaskDateString = (dateVal) => {
-    if (typeof dateVal === 'number') {
-      return new Date(dateVal * 1000).toISOString().split('T')[0];
-    }
-    return dateVal;
-  };
+  // --- Strict Logged-In User Task Filtering & Metric Calculations ---
+  const userTasks = tasks.filter(task => String(task.userId) === String(currentUserId));
+  
+  const totalTasksCount = userTasks.length;
+  const completeTaskCounts = userTasks.filter(task => task.status?.toLowerCase() === "completed").length;
+  const pendingTasksCount = userTasks.filter(task => task.status?.toLowerCase() !== "completed").length;
 
   const todayStr = new Date().toISOString().split('T')[0];
-  const overdueTasksCount = tasks.filter(task => {
-    const isUnfinished = task.status === "Incomplete" || task.status === "Pending" || task.status === "Todo" || task.status === "In Progress";
+  const overdueTasksCount = userTasks.filter(task => {
+    const isUnfinished = task.status?.toLowerCase() !== "completed";
     const taskFinalDateStr = formatTaskDateString(task.finaldate);
     return isUnfinished && taskFinalDateStr < todayStr;
   }).length;
-
-  const handleTaskCreation = () => {
-    setOpenTaskEntry(true);
-  };
 
   const handleSubmitTask = async (e) => {
     e.preventDefault();
@@ -155,18 +171,16 @@ function Dashboard() {
     }
   };
 
-  const formattedTasksForChart = tasks.map(task => ({
+  const formattedTasksForChart = userTasks.map(task => ({
     ...task,
     issuedate: formatTaskDateString(task.issuedate),
     finaldate: formatTaskDateString(task.finaldate)
   }));
 
-  const getFilteredTasks = () => {
-    if (filterPriority === "All") return tasks;
-    return tasks.filter(task => task.priority?.toLowerCase() === filterPriority.toLowerCase());
-  };
-
-  const filteredTasks = getFilteredTasks();
+  const filteredTasks = userTasks.filter(task => {
+    if (filterPriority === "All") return true;
+    return task.priority?.toLowerCase() === filterPriority.toLowerCase();
+  });
 
   return (
     <SidebarProvider>
@@ -190,7 +204,7 @@ function Dashboard() {
             <h2>Good Morning {name} </h2>
             <p>You have {pendingTasksCount} pending and an upcoming meeting in 30 minutes. Let's make this day productive.</p>
             <div className="taskbuttons">
-              <button className="createtask" onClick={handleTaskCreation}>
+              <button className="createtask" onClick={() => setOpenTaskEntry(true)}>
                 <Plus /> Create Task
               </button>
               <button className="viewschedule">View Schedule</button>
@@ -246,11 +260,7 @@ function Dashboard() {
                     return (
                       <div key={activity.id} className="activity-item">
                         <div className={`activity-icon-wrapper ${iconClass}`}>
-                          {isCompleted ? (
-                            <Check size={16} strokeWidth={3} />
-                          ) : (
-                            <Plus size={16} strokeWidth={3} />
-                          )}
+                          {isCompleted ? <Check size={16} strokeWidth={3} /> : <Plus size={16} strokeWidth={3} />}
                         </div>
                         <div className="activity-content">
                           <span className="activity-title">{activity.title}</span>
@@ -273,7 +283,7 @@ function Dashboard() {
 
           <div className="focustasks">
             <div className="headerrow">
-              <h3>Focus Tasks</h3>
+              <h4>Focus Tasks</h4>
               <div className="filter-container">
                 <div className="filter" onClick={() => setShowFilterDropdown(!showFilterDropdown)}>
                   <ListFilter size={18} />
@@ -281,30 +291,15 @@ function Dashboard() {
                 </div>
                 {showFilterDropdown && (
                   <div className="filter-dropdown" style={{ cursor: "pointer" }}>
-                    <div
-                      className={`filter-item ${filterPriority === "All" ? "active" : ""}`}
-                      onClick={() => { setFilterPriority("All"); setShowFilterDropdown(false); }}
-                    >
-                      All Tasks
-                    </div>
-                    <div
-                      className={`filter-item ${filterPriority === "Low" ? "active" : ""}`}
-                      onClick={() => { setFilterPriority("Low"); setShowFilterDropdown(false); }}
-                    >
-                      Low Priority
-                    </div>
-                    <div
-                      className={`filter-item ${filterPriority === "High" ? "active" : ""}`}
-                      onClick={() => { setFilterPriority("High"); setShowFilterDropdown(false); }}
-                    >
-                      High Priority
-                    </div>
-                    <div
-                      className={`filter-item ${filterPriority === "Critical" ? "active" : ""}`}
-                      onClick={() => { setFilterPriority("Critical"); setShowFilterDropdown(false); }}
-                    >
-                      Critical Priority
-                    </div>
+                    {["All", "Low", "High", "Critical"].map((p) => (
+                      <div
+                        key={p}
+                        className={`filter-item ${filterPriority === p ? "active" : ""}`}
+                        onClick={() => { setFilterPriority(p); setShowFilterDropdown(false); }}
+                      >
+                        {p === "All" ? "All Tasks" : `${p} Priority`}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -316,7 +311,7 @@ function Dashboard() {
                   <tr>
                     <th>Task Name</th>
                     <th>Priority</th>
-                    <th>Due Date</th>
+                    <th>Time Remaining</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -330,7 +325,7 @@ function Dashboard() {
                             {task.priority}
                           </span>
                         </td>
-                        <td>{formatTaskDateString(task.finaldate)}</td>
+                        <td>{getRemainingDaysText(task.finaldate, task.status)}</td>
                         <td>
                           <span className={`status-${task.status?.toLowerCase().replace(/\s+/g, '')}`}>
                             {task.status}
@@ -412,6 +407,7 @@ function Dashboard() {
                   >
                     <option value="" disabled>Select Priority...</option>
                     <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
                     <option value="High">High</option>
                     <option value="Critical">Critical</option>
                   </select>

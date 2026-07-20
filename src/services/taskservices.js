@@ -34,7 +34,7 @@ export const getAllTasks = async () => {
   return res.data;
 };
 
-export const statusupdate = async (taskId) => {
-  const res = await api.put(`/Tasks/${taskId}`, { status: "Completed" });
+export const statusupdate = async (taskId, status) => {
+  const res = await api.put(`/Tasks/${taskId}`, { status: status });
   return res.data; 
 };

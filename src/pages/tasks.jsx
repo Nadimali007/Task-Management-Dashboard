@@ -1,37 +1,161 @@
 import React, { useState, useEffect } from 'react';
 import AppSidebar from "@/components/sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Search } from 'lucide-react';
+import { Search, X, Plus } from 'lucide-react';
 import { Input } from "../components/ui/input.jsx";
-import { gettasks, statusupdate, logActivity } from "@/services/taskservices";
+import { getAllTasks, statusupdate, logActivity, addtasks } from "@/services/taskservices";
+import { getUsers } from "../services/authservices";
 import '../css/tasks.css';
+
+function TaskCard({ task, userId, usersMap, onClick, formatDate }) {
+  const isCompleted = task.status === "Completed" || task.status === "completed";
+  const assignedUserName = usersMap[String(task.userId)] || `User ${task.userId}`;
+  const isAssignedToCurrentUser = String(task.userId) === String(userId);
+  const priority = task.priority || "Medium";
+
+  // Check if status is in progress
+  const isInProgress = task.status?.toLowerCase() === "in progress" || task.status?.toLowerCase() === "inprogress";
+
+  return (
+    <div
+      onClick={() => onClick(task, isAssignedToCurrentUser)}
+      className={`task-card border-l-4 ${isAssignedToCurrentUser
+        ? "border-l-indigo-600 dark:border-l-indigo-500 task-card-interactive task-card-mine"
+        : "border-l-transparent task-card-disabled"
+        } ${isCompleted ? "task-card-completed" : ""}`}
+    >
+      <div className="task-card-header flex flex-col items-start gap-2">
+        <div className="task-badges flex items-center justify-between w-full">
+          <span className={`task-priority-badge priority-${priority.toLowerCase()}`}>
+            {priority}
+          </span>
+        </div>
+        <h3 className={`task-card-title ${isCompleted ? "title-completed" : ""}`} style={{ marginTop: "10px" }}>{task.title}</h3>
+      </div>
+
+      {/* Description clamped to 2 lines */}
+      <p className="task-card-description">{task.description || "No description provided."}</p>
+
+      <div className="task-card-footer">
+        <div className="task-dates">
+          {/* Display 'In Progress' if in progress, otherwise show formatted date like '20 Jul' */}
+          <span className="date-due">
+            {isInProgress ? "In Progress" : `Due: ${formatDate(task.finaldate)}`}
+          </span>
+        </div>
+        <div className="task-assignee flex items-center gap-1.5">
+          {isAssignedToCurrentUser && (
+            <span className="inline-block w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400" />
+          )}
+          <span>{assignedUserName} {isAssignedToCurrentUser && "(You)"}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TaskModal({ selectedTask, selectedStatus, usersMap, onStatusChange, onClose, onSave, formatDate }) {
+  if (!selectedTask) return null;
+
+  const priority = selectedTask.priority || "Medium";
+  const assignedName = usersMap[String(selectedTask.userId)] || `User ${selectedTask.userId}`;
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-card">
+        <div className="modal-header">
+          <button onClick={onClose} className="modal-close-btn" aria-label="Close modal">
+            <X />
+          </button>
+        </div>
+
+        <div className="modal-info-card">
+          <h3 className="modal-title">{selectedTask.title}</h3>
+          <p className="modal-description">
+            {selectedTask.description || "No description provided for this task."}
+          </p>
+        </div>
+
+        <div className="modal-grid">
+          <div className="modal-info-card">
+            <span className="modal-info-label">Assigned To</span>
+            <span className="modal-info-value">{assignedName}</span>
+          </div>
+
+          <div className="modal-info-card">
+            <span className="modal-info-label">Issued Date</span>
+            <span className="modal-info-value">{formatDate(selectedTask.issuedate)}</span>
+          </div>
+
+          <div className="modal-info-card">
+            <span className="modal-info-label">Due Date</span>
+            <span className="modal-info-value due-accent">{formatDate(selectedTask.finaldate)}</span>
+          </div>
+
+          <div className="modal-info-card">
+            <span className="modal-info-label">Priority</span>
+            <span className="modal-info-value due-accent">{priority}</span>
+          </div>
+        </div>
+
+        <div className="modal-select-wrapper">
+          <label className="modal-select-label">Update Task Status</label>
+          <select
+            value={selectedStatus}
+            onChange={(e) => onStatusChange(e.target.value)}
+            className="modal-select"
+          >
+            <option value="Incomplete">Incomplete</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Review">Review</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+        <div className="modal-footer">
+          <button onClick={onSave} className="modal-btn">
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Tasks() {
   const [tasks, setTasks] = useState([]);
+  const [usersMap, setUsersMap] = useState({});
   const [userId, setUserId] = useState(null);
   const [teamId, setTeamId] = useState(null);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState("In Progress");
+  const [activeStatusFilter, setActiveStatusFilter] = useState("ALL");
+
+  const [openTaskEntry, setOpenTaskEntry] = useState(false);
+  const [taskName, setTaskName] = useState("");
+  const [taskDescription, setTaskDescription] = useState("");
+  const [issueDate, setIssueDate] = useState("");
+  const [finalDate, setFinalDate] = useState("");
+  const [priority, setPriority] = useState("");
 
   useEffect(() => {
     let storedId = sessionStorage.getItem("currentUserId") || localStorage.getItem("currentUserId");
-                     
+
     if (!storedId) {
       storedId = sessionStorage.getItem("userId") || localStorage.getItem("userId");
     }
 
-    if (!storedId) {
-      const sessionUser = sessionStorage.getItem("user") || localStorage.getItem("user");
-      if (sessionUser) {
-        try {
-          const parsed = JSON.parse(sessionUser);
-          if (parsed.id || parsed._id) {
-            storedId = parsed.id || parsed._id;
-          }
-          if (parsed.teamId) {
-            setTeamId(String(parsed.teamId));
-          }
-        } catch (e) {
-          console.error("Error parsing user object from storage", e);
+    const sessionUser = sessionStorage.getItem("user") || localStorage.getItem("user");
+    if (sessionUser) {
+      try {
+        const parsed = JSON.parse(sessionUser);
+        if (parsed.id || parsed._id) {
+          storedId = parsed.id || parsed._id;
         }
+        if (parsed.teamId) {
+          setTeamId(String(parsed.teamId));
+        }
+      } catch (e) {
+        console.error("Error parsing user object from storage", e);
       }
     }
 
@@ -40,30 +164,52 @@ function Tasks() {
     }
   }, []);
 
+  const fetchUsersDirectory = async () => {
+    try {
+      const allUsers = await getUsers() || [];
+      const mapping = {};
+      allUsers.forEach(user => {
+        const id = user.id || user._id;
+        if (id) {
+          mapping[String(id)] = user.name;
+        }
+      });
+      setUsersMap(mapping);
+    } catch (error) {
+      console.error("Error creating users dictionary:", error);
+    }
+  };
+
   const fetchUserTasks = async () => {
     if (!userId) return;
-    
-    console.log("Logged in ID in TaskPage: ", userId);
+
     try {
-      const data = await gettasks(userId) || [];
-      
+      await fetchUsersDirectory();
+
+      const allDatabaseTasks = await getAllTasks() || [];
       let activeTeamId = teamId;
 
       if (!activeTeamId) {
-        const currentUserTask = data.find(task => String(task.userId) === String(userId));
+        const currentUserTask = allDatabaseTasks.find(task => String(task.userId) === String(userId));
         if (currentUserTask?.teamId) {
           activeTeamId = String(currentUserTask.teamId);
-          setTeamId(activeTeamId); 
+          setTeamId(activeTeamId);
         }
       }
 
-      if (activeTeamId) {
-        const teamTasks = data.filter(task => String(task.teamId) === String(activeTeamId));
-        setTasks(teamTasks);
-      } else {
-        const individualTasks = data.filter(task => String(task.userId) === String(userId));
-        setTasks(individualTasks);
-      }
+      const filteredTasks = activeTeamId
+        ? allDatabaseTasks.filter(task => String(task.teamId) === String(activeTeamId))
+        : allDatabaseTasks.filter(task => String(task.userId) === String(userId));
+
+      const sortedTasks = [...filteredTasks].sort((a, b) => {
+        const aIsMine = String(a.userId) === String(userId);
+        const bIsMine = String(b.userId) === String(userId);
+        if (aIsMine && !bIsMine) return -1;
+        if (!aIsMine && bIsMine) return 1;
+        return 0;
+      });
+
+      setTasks(sortedTasks);
     } catch (error) {
       console.error("Error fetching tasks:", error);
     }
@@ -73,38 +219,153 @@ function Tasks() {
     if (userId) {
       fetchUserTasks();
     }
-  }, [userId, teamId]); 
+  }, [userId, teamId]);
 
-  const handlestatus = async (taskId) => {
-    try {
-      const targetTask = tasks.find(task => (task.id === taskId || task._id === taskId));
-      const taskTitle = targetTask ? targetTask.title : "Unknown Task";
-
-      setTasks(prevTasks =>
-        prevTasks.map(task =>
-          (task.id === taskId || task._id === taskId) ? { ...task, status: "Completed" } : task
-        )
-      );
-
-      await logActivity(userId, "Task Completed", taskTitle);
-      await statusupdate(taskId);
-      await fetchUserTasks();
-    } catch (error) {
-      console.error("Failed to update task status:", error);
+  const handleTaskCardClick = (task, isAssignedToCurrentUser) => {
+    if (isAssignedToCurrentUser) {
+      setSelectedTask(task);
+      setSelectedStatus(task.status || "In Progress");
     }
   };
 
-  const formatDisplayDate = (dateVal) => {
-    if (typeof dateVal === 'number') {
-      return new Date(dateVal * 1000).toLocaleDateString();
+  const handleSaveAndClose = async () => {
+    if (!selectedTask) return;
+
+    const targetId = String(selectedTask.id || selectedTask._id);
+    const taskTitle = selectedTask.title || "Unknown Task";
+    const updatedStatus = selectedStatus;
+
+    setTasks(prevTasks =>
+      prevTasks.map(task => {
+        const currentTaskId = String(task.id || task._id);
+        if (currentTaskId === targetId) {
+          return { ...task, status: updatedStatus };
+        }
+        return task;
+      })
+    );
+
+    setSelectedTask(null);
+
+    try {
+      await statusupdate(targetId, updatedStatus);
+      await logActivity(userId, `Task Status: ${updatedStatus}`, taskTitle);
+    } catch (error) {
+      console.error("Failed to update task status:", error);
+      await fetchUserTasks();
     }
-    return dateVal;
+  };
+
+  // Format date to short string like '20 Jul' or '12 Oct'
+  const formatDisplayDate = (dateVal) => {
+    if (!dateVal) return "N/A";
+    const dateObj = typeof dateVal === 'number' ? new Date(dateVal * 1000) : new Date(dateVal);
+    
+    if (isNaN(dateObj.getTime())) return dateVal;
+
+    return dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  };
+
+  const handleTaskCreation = () => {
+    setOpenTaskEntry(true);
+  };
+
+  const handleSubmitTask = async (e) => {
+    e.preventDefault();
+
+    if (new Date(finalDate) < new Date(issueDate)) {
+      alert("End Date cannot be earlier than Issue Date.");
+      return;
+    }
+
+    const newTask = {
+      title: taskName,
+      description: taskDescription,
+      issuedate: issueDate,
+      finaldate: finalDate,
+      status: "Incomplete",
+      priority: priority,
+      userId: userId || null,
+      teamId: teamId || null,
+    };
+
+    try {
+      await addtasks(newTask);
+      await logActivity(userId, "Task Created", taskName);
+
+      await fetchUserTasks();
+
+      setTaskName("");
+      setTaskDescription("");
+      setIssueDate("");
+      setFinalDate("");
+      setPriority("");
+      setOpenTaskEntry(false);
+    } catch (error) {
+      console.error("Error creating task:", error);
+    }
+  };
+
+  const statusCategories = [
+    { key: "ALL", label: "ALL" },
+    { key: "Incomplete", label: "INCOMPLETE" },
+    { key: "In Progress", label: "IN PROGRESS" },
+    { key: "Review", label: "REVIEW" },
+    { key: "Completed", label: "COMPLETED" }
+  ];
+
+  const getStatusCount = (key) => {
+    if (key === "ALL") return tasks.length;
+    return tasks.filter(task => {
+      const status = task.status ? task.status.toLowerCase() : "";
+      if (key === "Completed") return status === "completed";
+      if (key === "In Progress") return status === "in progress" || status === "inprogress";
+      if (key === "Incomplete") return status === "incomplete" || status === "pending" || status === "todo";
+      if (key === "Review") return status === "review";
+      return false;
+    }).length;
+  };
+
+  const filteredTasks = tasks.filter(task => {
+    if (activeStatusFilter === "ALL") return true;
+    const status = task.status ? task.status.toLowerCase() : "";
+    if (activeStatusFilter === "Completed") return status === "completed";
+    if (activeStatusFilter === "In Progress") return status === "in progress" || status === "inprogress";
+    if (activeStatusFilter === "Incomplete") return status === "incomplete" || status === "pending" || status === "todo";
+    if (activeStatusFilter === "Review") return status === "review";
+    return true;
+  });
+
+  const renderTasksList = () => {
+    if (filteredTasks.length === 0) {
+      return (
+        <div className="empty-tasks-state">
+          <p className="empty-tasks-message">No tasks found for this status.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="tasks-grid">
+        {filteredTasks.map(task => (
+          <TaskCard
+            key={task.id || task._id}
+            task={task}
+            userId={userId}
+            usersMap={usersMap}
+            onClick={handleTaskCardClick}
+            formatDate={formatDisplayDate}
+          />
+        ))}
+      </div>
+    );
   };
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full relative">
-        <AppSidebar className=" m-5 p-5" />
+        <AppSidebar className="m-5 p-5" />
+
         <main className="flex-1 bg-slate-50 dark:bg-zinc-900 relative">
           <header className="dashboard-header">
             <SidebarTrigger className="md:hidden" />
@@ -121,53 +382,136 @@ function Tasks() {
           <div className="tasks-container">
             <div className="tasks-header">
               <div>
-                <h2 className="tasks-title">Kanban Board</h2>
-                <p className="tasks-subtitle">Manage and track work items assigned across your group</p>
+                <h2 className="tasks-title">
+                  Kanban Board
+                </h2>
+                <p className="tasks-subtitle">
+                  Manage and track work items assigned across your group
+                </p>
               </div>
+              <button className="createTaskBtn" onClick={handleTaskCreation}>
+                <Plus /> Create Task
+              </button>
             </div>
 
-            {tasks.length === 0 ? (
-              <div className="empty-tasks-state">
-                <p className="empty-tasks-message">No tasks assigned to your team yet.</p>
-              </div>
-            ) : (
-              <div className="tasks-grid">
-                {tasks.map((task) => {
-                  const taskId = task.id || task._id;
-                  const isCompleted = task.status === "Completed";
+            <div className="status-filter-bar">
+              {statusCategories.map(category => {
+                const count = getStatusCount(category.key);
+                const isActive = activeStatusFilter === category.key;
+                return (
+                  <button
+                    key={category.key}
+                    onClick={() => setActiveStatusFilter(category.key)}
+                    className={`status-filter-tab ${isActive ? "active" : ""}`}
+                  >
+                    <span>{category.label}</span>
+                    <span className="status-filter-count">
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
 
-                  return (
-                    <div
-                      key={taskId}
-                      className={`task-card ${isCompleted ? "task-completed" : ""}`}
-                    >
-                      <div className="task-card-header">
-                        <h3 className="task-card-title">{task.title}</h3>
-                        {isCompleted ? (
-                          <span className="task-status-badge badge-completed">Completed</span>
-                        ) : (
-                          <button 
-                            onClick={() => handlestatus(taskId)}
-                            className="status-toggle-btn"
-                          >
-                            Mark Complete
-                          </button>
-                        )}
-                      </div>
-                      <p className="task-card-description">{task.description || "No description provided."}</p>
-                      <div className="task-card-footer">
-                        <div className="task-dates">
-                          <span className="date-issued">Issued: {formatDisplayDate(task.issuedate)}</span>
-                          <span className="date-due">Due: {formatDisplayDate(task.finaldate)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            {renderTasksList()}
           </div>
+
+          <TaskModal
+            selectedTask={selectedTask}
+            selectedStatus={selectedStatus}
+            usersMap={usersMap}
+            onStatusChange={setSelectedStatus}
+            onClose={() => setSelectedTask(null)}
+            onSave={handleSaveAndClose}
+            formatDate={formatDisplayDate}
+          />
         </main>
+
+        {openTaskEntry && (
+          <div className="taskformdiv">
+            <div>
+              <h3>Create New Task</h3>
+
+              <form onSubmit={handleSubmitTask} className="taskform">
+                <div>
+                  <label>Task Title</label>
+                  <Input
+                    type="text"
+                    value={taskName}
+                    onChange={(e) => setTaskName(e.target.value)}
+                    placeholder="Enter task name"
+                    required
+                    className="inputfield"
+                  />
+                </div>
+
+                <div>
+                  <label>Description</label>
+                  <textarea
+                    value={taskDescription}
+                    onChange={(e) => setTaskDescription(e.target.value)}
+                    placeholder="Describe your task..."
+                    className="textarea"
+                  />
+                </div>
+
+                <div>
+                  <label>Issue Date</label>
+                  <Input
+                    type="date"
+                    value={issueDate}
+                    onChange={(e) => setIssueDate(e.target.value)}
+                    className="inputfield"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label>End Date</label>
+                  <Input
+                    type="date"
+                    value={finalDate}
+                    onChange={(e) => setFinalDate(e.target.value)}
+                    className="inputfield"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label>Priority</label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                    className="inputfield cursor-pointer"
+                    required
+                  >
+                    <option value="" disabled>Select Priority...</option>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                  </select>
+                </div>
+
+                <div className="buttons">
+                  <button
+                    type="button"
+                    onClick={() => setOpenTaskEntry(false)}
+                    className="cancelButton"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="saveButton"
+                  >
+                    Save Task
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </SidebarProvider>
   );

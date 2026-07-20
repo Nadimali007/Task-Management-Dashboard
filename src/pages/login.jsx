@@ -110,6 +110,7 @@ function Login() {
               registered: true,
               UserID: user.id,
               name: user.name,
+              teamId:user.teamId
             },
           });
         }, 2000);
