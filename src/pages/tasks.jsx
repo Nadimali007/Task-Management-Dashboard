@@ -6,15 +6,19 @@ import { Input } from "../components/ui/input.jsx";
 import { getAllTasks, statusupdate, logActivity, addtasks } from "@/services/taskservices";
 import { getUsers } from "../services/authservices";
 import '../css/tasks.css';
-
 function TaskCard({ task, userId, usersMap, onClick, formatDate }) {
-  const isCompleted = task.status === "Completed" || task.status === "completed";
+  const isCompleted = task.status?.toLowerCase() === "completed";
+  const isInProgress = task.status?.toLowerCase() === "in progress" || task.status?.toLowerCase() === "inprogress";
+  
   const assignedUserName = usersMap[String(task.userId)] || `User ${task.userId}`;
   const isAssignedToCurrentUser = String(task.userId) === String(userId);
   const priority = task.priority || "Medium";
 
-  // Check if status is in progress
-  const isInProgress = task.status?.toLowerCase() === "in progress" || task.status?.toLowerCase() === "inprogress";
+  const getFooterStatusText = () => {
+    if (isInProgress) return "In Progress";
+    if (isCompleted) return "Completed";
+    return `Due: ${formatDate(task.finaldate)}`;
+  };
 
   return (
     <div
@@ -30,17 +34,17 @@ function TaskCard({ task, userId, usersMap, onClick, formatDate }) {
             {priority}
           </span>
         </div>
-        <h3 className={`task-card-title ${isCompleted ? "title-completed" : ""}`} style={{ marginTop: "10px" }}>{task.title}</h3>
+        <h3 className={`task-card-title ${isCompleted ? "title-completed" : ""}`} style={{ marginTop: "10px" }}>
+          {task.title}
+        </h3>
       </div>
 
-      {/* Description clamped to 2 lines */}
       <p className="task-card-description">{task.description || "No description provided."}</p>
 
       <div className="task-card-footer">
         <div className="task-dates">
-          {/* Display 'In Progress' if in progress, otherwise show formatted date like '20 Jul' */}
           <span className="date-due">
-            {isInProgress ? "In Progress" : `Due: ${formatDate(task.finaldate)}`}
+            {getFooterStatusText()}
           </span>
         </div>
         <div className="task-assignee flex items-center gap-1.5">
@@ -256,7 +260,6 @@ function Tasks() {
     }
   };
 
-  // Format date to short string like '20 Jul' or '12 Oct'
   const formatDisplayDate = (dateVal) => {
     if (!dateVal) return "N/A";
     const dateObj = typeof dateVal === 'number' ? new Date(dateVal * 1000) : new Date(dateVal);

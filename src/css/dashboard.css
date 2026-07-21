@@ -98,6 +98,7 @@ main {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -175,7 +176,7 @@ main {
   padding: 1.25rem;
 }
 
-.taskformdiv > div {
+.taskformdiv>div {
   position: relative;
   width: 100%;
   max-width: 520px;
@@ -194,22 +195,22 @@ main {
   scrollbar-color: #27272a #0d0d0f;
 }
 
-.taskformdiv > div::-webkit-scrollbar {
+.taskformdiv>div::-webkit-scrollbar {
   width: 8px;
 }
 
-.taskformdiv > div::-webkit-scrollbar-track {
+.taskformdiv>div::-webkit-scrollbar-track {
   background: #0d0d0f;
   border-radius: 0 18px 18px 0;
 }
 
-.taskformdiv > div::-webkit-scrollbar-thumb {
+.taskformdiv>div::-webkit-scrollbar-thumb {
   background-color: #27272a;
   border-radius: 20px;
   border: 2px solid #0d0d0f;
 }
 
-.taskformdiv > div::-webkit-scrollbar-thumb:hover {
+.taskformdiv>div::-webkit-scrollbar-thumb:hover {
   background-color: #3f3f46;
 }
 
@@ -218,6 +219,7 @@ main {
     opacity: 0;
     transform: translateY(20px) scale(0.97);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -351,6 +353,7 @@ main {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -361,9 +364,9 @@ main {
 .tasksdiv .completetasks,
 .tasksdiv .pendingtasks,
 .tasksdiv .overduetasks {
-  background-color: #121215;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 12px;
+  border: 1px solid #1e2330;
+  border-radius: 10px;
+  background: #121623;
   padding: 1rem;
   transition: border-color 0.2s ease;
 }
@@ -386,9 +389,17 @@ main {
   font-weight: 600;
 }
 
-.completetasks .upersubdiv span { color: #34d399; }
-.pendingtasks .upersubdiv span { color: #ffffff; }
-.overduetasks .upersubdiv span { color: #ff8c54; }
+.completetasks .upersubdiv span {
+  color: #34d399;
+}
+
+.pendingtasks .upersubdiv span {
+  color: #ffffff;
+}
+
+.overduetasks .upersubdiv span {
+  color: #ff8c54;
+}
 
 .totaltasks p,
 .completetasks p,
@@ -410,10 +421,18 @@ main {
   border-radius: 6px;
 }
 
-.totaltasks .upersubdiv .image { color: #d2bbff; }
-.completetasks .upersubdiv .image { color: #34d399; }
+.totaltasks .upersubdiv .image {
+  color: #d2bbff;
+}
+
+.completetasks .upersubdiv .image {
+  color: #34d399;
+}
+
 .pendingtasks .upersubdiv .image,
-.overduetasks .upersubdiv .image { color: #ff8c54; }
+.overduetasks .upersubdiv .image {
+  color: #ff8c54;
+}
 
 .count {
   color: #ffffff;
@@ -434,17 +453,17 @@ main {
   width: 100%;
   min-height: 340px;
   padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background-color: #121215;
-  border-radius: 12px;
+  border: 1px solid #1e2330;
+  border-radius: 10px;
+  background: #121623;
 }
 
 .recentactvities {
   display: flex;
   flex-direction: column;
-  background-color: #121215;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 12px;
+  border: 1px solid #1e2330;
+  border-radius: 10px;
+  background: #121623;
   padding: 1.25rem;
   width: 100%;
 }
@@ -498,9 +517,9 @@ main {
 .focustasks {
   margin: 0 24px 24px 24px;
   color: #ffffff;
-  background-color: #121215;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 12px;
+  border: 1px solid #1e2330;
+  border-radius: 10px;
+  background: #121623;
   padding: 1.25rem;
 }
 
@@ -870,8 +889,8 @@ main {
   .task-table {
     min-width: 550px;
   }
-  
-  .task-table td, 
+
+  .task-table td,
   .task-table th {
     padding: 10px 8px;
     font-size: 0.8rem;
@@ -894,12 +913,12 @@ main {
   .tasksdiv {
     gap: 10px;
   }
-  
+
   .activities-list {
     margin-left: 0;
   }
 
-  .taskformdiv > div {
+  .taskformdiv>div {
     padding: 1.15rem;
   }
 

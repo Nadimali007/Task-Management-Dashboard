@@ -22,7 +22,6 @@ function Dashboard() {
 
   const location = useLocation();
 
-  // Get logged-in user ID and Name safely
   const currentUserId = (() => {
     if (location.state?.UserID || location.state?.userId) {
       return location.state.UserID || location.state.userId;
@@ -39,7 +38,6 @@ function Dashboard() {
     return sessionUser?.name || localUser?.name || "User";
   })();
 
-  // Utility: Format unix timestamps or ISO date strings to 'YYYY-MM-DD'
   const formatTaskDateString = (dateVal) => {
     if (!dateVal) return "";
     if (typeof dateVal === 'number') {
@@ -48,7 +46,6 @@ function Dashboard() {
     return dateVal;
   };
 
-  // Utility: Calculate remaining or overdue days
   const getRemainingDaysText = (finalDateVal, status) => {
     if (status?.toLowerCase() === "completed") {
       return "Completed";

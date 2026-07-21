@@ -188,9 +188,9 @@ body,
   align-items: center;
   justify-content: center;
   padding: 3rem;
-  background-color: #121215;
-  border: 2px dashed rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
+  border: 1px solid #1e2330;
+  border-radius: 10px;
+  background: #121623;
   text-align: center;
   margin-top: 1rem;
 }
@@ -223,9 +223,9 @@ body,
   flex-direction: column;
   justify-content: space-between;
   padding: 1.25rem;
-  background-color: #121215;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 14px;
+  border: 1px solid #1e2330;
+  border-radius: 10px;
+  background: #121623;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -323,12 +323,12 @@ body,
 
 .task-card-footer {
   display: flex;
-  flex-direction: row;       
-  align-items: center;         
-  justify-content: space-between; 
-  gap: 12px;                   
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   width: 100%;
-  margin-top: auto;          
+  margin-top: auto;
 }
 
 .task-dates {
@@ -360,6 +360,7 @@ body,
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -371,6 +372,7 @@ body,
     opacity: 0;
     transform: translateY(20px) scale(0.97);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -398,9 +400,9 @@ body,
   flex-direction: column;
   padding: 2rem;
   animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  border-radius: 18px;
-  background: #0d0d0f;
-  border: 1px solid rgba(99, 102, 241, 0.35);
+  border: 1px solid #1e2330;
+  border-radius: 10px;
+  background: #121623;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
   max-height: 90vh;
   overflow-y: auto;
@@ -578,7 +580,6 @@ body,
   box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
 
-/* Fullscreen Popup Task Form Overlay with Blur */
 .taskformdiv {
   position: fixed;
   top: 0;
@@ -591,14 +592,16 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.55);
+  border: 1px solid #1e2330;
+  border-radius: 10px;
+  background: #121623;
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
   will-change: backdrop-filter;
   padding: 1.25rem;
 }
 
-.taskformdiv > div {
+.taskformdiv>div {
   position: relative;
   width: 100%;
   max-width: 520px;
@@ -617,22 +620,22 @@ body,
   scrollbar-color: #27272a #0d0d0f;
 }
 
-.taskformdiv > div::-webkit-scrollbar {
+.taskformdiv>div::-webkit-scrollbar {
   width: 8px;
 }
 
-.taskformdiv > div::-webkit-scrollbar-track {
+.taskformdiv>div::-webkit-scrollbar-track {
   background: #0d0d0f;
   border-radius: 0 18px 18px 0;
 }
 
-.taskformdiv > div::-webkit-scrollbar-thumb {
+.taskformdiv>div::-webkit-scrollbar-thumb {
   background-color: #27272a;
   border-radius: 20px;
   border: 2px solid #0d0d0f;
 }
 
-.taskformdiv > div::-webkit-scrollbar-thumb:hover {
+.taskformdiv>div::-webkit-scrollbar-thumb:hover {
   background-color: #3f3f46;
 }
 
@@ -805,7 +808,7 @@ body,
     grid-column: span 1;
   }
 
-  .taskformdiv > div {
+  .taskformdiv>div {
     padding: 1.25rem;
   }
 
