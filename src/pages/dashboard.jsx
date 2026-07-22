@@ -22,21 +22,19 @@ function Dashboard() {
 
   const location = useLocation();
 
-  const currentUserId = (() => {
-    if (location.state?.UserID || location.state?.userId) {
-      return location.state.UserID || location.state.userId;
-    }
+  // Retrieve Logged-in User Data (ID, Name, Team ID)
+  const getUserData = () => {
     const sessionUser = JSON.parse(sessionStorage.getItem("user") || "{}");
     const localUser = JSON.parse(localStorage.getItem("user") || "{}");
-    return sessionUser?.id || localUser?.id || null;
-  })();
 
-  const name = (() => {
-    if (location.state?.name) return location.state.name;
-    const sessionUser = JSON.parse(sessionStorage.getItem("user") || "{}");
-    const localUser = JSON.parse(localStorage.getItem("user") || "{}");
-    return sessionUser?.name || localUser?.name || "User";
-  })();
+    const userId = location.state?.UserID || location.state?.userId || sessionUser?.id || localUser?.id || null;
+    const name = location.state?.name || sessionUser?.name || localUser?.name || "User";
+    const teamId = location.state?.teamId || location.state?.team_id || sessionUser?.teamId || sessionUser?.team_id || localUser?.teamId || localUser?.team_id || null;
+
+    return { userId, name, teamId };
+  };
+
+  const { userId: currentUserId, name, teamId: currentTeamId } = getUserData();
 
   const formatTaskDateString = (dateVal) => {
     if (!dateVal) return "";
@@ -118,7 +116,6 @@ function Dashboard() {
     }
   }, [currentUserId]);
 
-  // --- Strict Logged-In User Task Filtering & Metric Calculations ---
   const userTasks = tasks.filter(task => String(task.userId) === String(currentUserId));
   
   const totalTasksCount = userTasks.length;
@@ -140,6 +137,7 @@ function Dashboard() {
       return;
     }
 
+    // Include teamId alongside userId when constructing new task object
     const newTask = {
       title: taskName,
       description: taskDescription,
@@ -148,6 +146,7 @@ function Dashboard() {
       status: "Incomplete",
       priority: priority,
       userId: currentUserId || null,
+      teamId: currentTeamId || null,
     };
 
     try {
@@ -378,7 +377,8 @@ function Dashboard() {
                     type="date"
                     value={issueDate}
                     onChange={(e) => setIssueDate(e.target.value)}
-                    className="inputfield"
+                    onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                    className="inputfield cursor-pointer"
                     required
                   />
                 </div>
@@ -389,7 +389,8 @@ function Dashboard() {
                     type="date"
                     value={finalDate}
                     onChange={(e) => setFinalDate(e.target.value)}
-                    className="inputfield"
+                    onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                    className="inputfield cursor-pointer"
                     required
                   />
                 </div>

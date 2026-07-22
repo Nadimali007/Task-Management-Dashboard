@@ -172,6 +172,11 @@ body,
   transition: background 0.2s, opacity 0.2s;
 }
 
+.profile-btn.text-xs {
+  font-size: 0.75rem;
+  padding: 6px 10px;
+}
+
 .profile-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -223,11 +228,19 @@ body,
   padding: 24px;
 }
 
+.full-width-card {
+  width: 100%;
+}
+
 .card-heading {
   font-size: 1rem;
   font-weight: 700;
-  color: #D2BBFF;
+  color: #ffffff !important;
   margin-bottom: 16px;
+}
+
+.info-card .card-heading {
+  color: #D2BBFF !important;
 }
 
 .bio-text {
@@ -300,6 +313,44 @@ body,
   color: #34d399;
 }
 
+.skills-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.skills-header .card-heading {
+  margin-bottom: 0;
+  color: #ffffff !important;
+}
+
+.skills-badges-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.skill-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: #181d2a;
+  border: 1px solid #2d3548;
+  border-radius: 20px;
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: #c7d2fe;
+  transition: all 0.2s ease-in-out;
+}
+
+.skill-badge:hover {
+  background: #232a3e;
+  border-color: #6366f1;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
 .profile-loading,
 .profile-not-found {
   text-align: center;
@@ -338,16 +389,24 @@ body,
 
 .modal-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   padding: 18px 24px;
   border-bottom: 1px solid #1e2330;
+  width: 100%;
 }
 
-.modal-header h3 {
+.modal-header-spacer {
+  width: 26px;
+}
+
+.modal-title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #ffffff !important;
+  text-align: center;
+  flex: 1;
+  margin: 0;
 }
 
 .modal-close-btn {
@@ -357,6 +416,11 @@ body,
   cursor: pointer;
   padding: 4px;
   border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
 }
 
 .modal-close-btn:hover {
@@ -496,5 +560,11 @@ body,
 
   .form-group.full-width {
     grid-column: span 1;
+  }
+
+  .skills-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
   }
 }

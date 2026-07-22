@@ -3,7 +3,21 @@ import { useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/sidebar";
 import { Input } from "@/components/ui/input";
-import { Search, Mail, MapPin, Clock,Share2,Edit,Star,User,X,Save,Loader2,Lock} from "lucide-react";
+import { 
+  Search, 
+  Mail, 
+  MapPin, 
+  Clock,
+  Share2,
+  Edit,
+  Star,
+  User,
+  X,
+  Save,
+  Loader2,
+  Lock,
+  Award
+} from "lucide-react";
 import { getProfiles, updateProfile } from "@/services/authservices";
 import '../css/profile.css';
 
@@ -95,6 +109,12 @@ function Profile() {
   const handleOpenEditModal = () => {
     if (!profile) return;
 
+    const rawSkills = Array.isArray(profile.skills)
+      ? profile.skills.join(", ")
+      : typeof profile.skills === "string"
+      ? profile.skills
+      : "Strategic Planning, Operations, Team Leadership, Process Scaling";
+
     setFormData({
       id: profile.id || profile._id || "",
       userId: profile.userId || profile.id || "",
@@ -110,7 +130,7 @@ function Profile() {
       directLine: profile.directLine || "",
       workExtension: profile.workExtension || "",
       slackHandle: profile.slackHandle || "",
-      skills: Array.isArray(profile.skills) ? profile.skills : [],
+      skills: rawSkills,
       performanceRating: profile.performanceRating !== undefined ? profile.performanceRating : 4.5
     });
 
@@ -135,6 +155,10 @@ function Profile() {
 
       const targetId = profile?.id || profile?.userId || profile?._id || formData.id || formData.userId;
 
+      const skillsArray = typeof formData.skills === "string"
+        ? formData.skills.split(",").map((s) => s.trim()).filter(Boolean)
+        : Array.isArray(formData.skills) ? formData.skills : [];
+
       const payload = {
         id: formData.id || targetId,
         userId: String(formData.userId || targetId),
@@ -150,7 +174,7 @@ function Profile() {
         directLine: formData.directLine,
         workExtension: formData.workExtension,
         slackHandle: formData.slackHandle,
-        skills: formData.skills,
+        skills: skillsArray,
         performanceRating: cleanPerformanceRating
       };
 
@@ -180,6 +204,12 @@ function Profile() {
       setIsSaving(false);
     }
   };
+
+  const displaySkills = Array.isArray(profile?.skills) && profile.skills.length > 0
+    ? profile.skills
+    : typeof profile?.skills === "string" && profile.skills.trim()
+    ? profile.skills.split(",").map((s) => s.trim())
+    : ["Strategic Planning", "Operations", "Team Leadership", "Process Scaling"];
 
   return (
     <SidebarProvider>
@@ -299,6 +329,22 @@ function Profile() {
                   </div>
                 </div>
 
+                <div className="profile-card full-width-card">
+                  <div className="skills-header">
+                    <h3 className="card-heading">Core Competencies & Skills</h3>
+                    <button className="profile-btn btn-secondary text-xs" onClick={handleOpenEditModal}>
+                      <Award size={13} /> Manage Skills
+                    </button>
+                  </div>
+                  <div className="skills-badges-container">
+                    {displaySkills.map((skill, index) => (
+                      <span key={index} className="skill-badge">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
               </div>
             ) : (
               <div className="profile-not-found">No profile found.</div>
@@ -310,7 +356,8 @@ function Profile() {
           <div className="modal-overlay">
             <div className="modal-content">
               <div className="modal-header">
-                <h3>Edit Profile Information</h3>
+                <div className="modal-header-spacer"></div>
+                <h3 className="modal-title">Edit Profile Information</h3>
                 <button className="modal-close-btn" onClick={() => setIsEditModalOpen(false)}>
                   <X size={18} />
                 </button>
@@ -446,6 +493,17 @@ function Profile() {
                       name="availability"
                       value={formData.availability}
                       onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label>Skills & Core Competencies (separated by comma)</label>
+                    <input
+                      type="text"
+                      name="skills"
+                      value={formData.skills}
+                      onChange={handleInputChange}
+                      placeholder="e.g. Strategic Planning, Operations, React.js"
                     />
                   </div>
 

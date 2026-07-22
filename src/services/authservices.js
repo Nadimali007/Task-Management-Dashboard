@@ -10,6 +10,19 @@ export const registerUser = async (userData) => {
   return res.data;
 };
 
+export const updateUser = async (userId, updatedFields) => {
+  const res = await userApi.get(`/users/${userId}`);
+  const existingUser = res.data;
+
+  const updatedUser = {
+    ...existingUser,
+    ...updatedFields,
+  };
+
+  const response = await userApi.put(`/users/${userId}`, updatedUser);
+  return response.data;
+};
+
 export const resetPassword = async (email, newPassword) => {
   const res = await userApi.get("/users");
 
@@ -51,9 +64,25 @@ export const createProfile = async (profileData) => {
   return res.data;
 };
 
-export const updateProfile = async (profileId, updatedData) => {
-  const res = await profileApi.put(`/user_profiles/${profileId}`, updatedData);
-  return res.data;
+export const updateProfile = async (profileIdOrUserId, updatedFields) => {
+  let profile = null;
+  try {
+    const res = await profileApi.get(`/user_profiles/${profileIdOrUserId}`);
+    profile = res.data;
+  } catch (e) {
+    profile = await getProfileByUserId(profileIdOrUserId);
+  }
+
+  if (profile) {
+    const updatedProfile = {
+      ...profile,
+      ...updatedFields,
+    };
+    const response = await profileApi.put(`/user_profiles/${profile.id}`, updatedProfile);
+    return response.data;
+  }
+
+  return null;
 };
 
 export const deleteProfile = async (profileId) => {
