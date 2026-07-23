@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from "react-router-dom";
 import AppSidebar from "@/components/sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Search, X, Plus } from 'lucide-react';
 import { Input } from "../components/ui/input.jsx";
-import { getAllTasks, statusupdate, logActivity, addtasks } from "@/services/taskservices";
+import { 
+  getAllTasks, 
+  statusupdate, 
+  logActivity, 
+  addtasks, 
+  getProjects, 
+  getUserTeams 
+} from "@/services/taskservices";
 import { getUsers } from "../services/authservices";
 import '../css/tasks.css';
+
 function TaskCard({ task, userId, usersMap, onClick, formatDate }) {
   const isCompleted = task.status?.toLowerCase() === "completed";
   const isInProgress = task.status?.toLowerCase() === "in progress" || task.status?.toLowerCase() === "inprogress";
@@ -128,8 +137,6 @@ function TaskModal({ selectedTask, selectedStatus, usersMap, onStatusChange, onC
 function Tasks() {
   const [tasks, setTasks] = useState([]);
   const [usersMap, setUsersMap] = useState({});
-  const [userId, setUserId] = useState(null);
-  const [teamId, setTeamId] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState("In Progress");
   const [activeStatusFilter, setActiveStatusFilter] = useState("ALL");
@@ -140,33 +147,54 @@ function Tasks() {
   const [issueDate, setIssueDate] = useState("");
   const [finalDate, setFinalDate] = useState("");
   const [priority, setPriority] = useState("");
+  const [projectId, setProjectId] = useState("");
+  const [projectsList, setProjectsList] = useState([]);
 
-  useEffect(() => {
-    let storedId = sessionStorage.getItem("currentUserId") || localStorage.getItem("currentUserId");
+  const location = useLocation();
 
-    if (!storedId) {
-      storedId = sessionStorage.getItem("userId") || localStorage.getItem("userId");
+  const formatDateForInput = (dateVal) => {
+    if (!dateVal) return "";
+    
+    if (typeof dateVal === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+      return dateVal;
     }
 
-    const sessionUser = sessionStorage.getItem("user") || localStorage.getItem("user");
-    if (sessionUser) {
-      try {
-        const parsed = JSON.parse(sessionUser);
-        if (parsed.id || parsed._id) {
-          storedId = parsed.id || parsed._id;
-        }
-        if (parsed.teamId) {
-          setTeamId(String(parsed.teamId));
-        }
-      } catch (e) {
-        console.error("Error parsing user object from storage", e);
-      }
+    const dateObj = typeof dateVal === 'number' ? new Date(dateVal * 1000) : new Date(dateVal);
+    if (isNaN(dateObj.getTime())) return "";
+
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDisplayDate = (dateVal) => {
+    if (!dateVal) return "N/A";
+    
+    let dateObj;
+    if (typeof dateVal === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+      const [year, month, day] = dateVal.split('-').map(Number);
+      dateObj = new Date(year, month - 1, day);
+    } else {
+      dateObj = typeof dateVal === 'number' ? new Date(dateVal * 1000) : new Date(dateVal);
     }
 
-    if (storedId) {
-      setUserId(String(storedId));
-    }
-  }, []);
+    if (isNaN(dateObj.getTime())) return dateVal;
+
+    return dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  };
+
+  const getUserData = () => {
+    const sessionUser = JSON.parse(sessionStorage.getItem("user") || "{}");
+    const localUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+    const userId = location.state?.UserID || location.state?.userId || sessionUser?.id || localUser?.id || sessionStorage.getItem("currentUserId") || localStorage.getItem("currentUserId") || null;
+
+    return { userId: userId ? String(userId) : null };
+  };
+
+  const { userId } = getUserData();
 
   const fetchUsersDirectory = async () => {
     try {
@@ -184,26 +212,53 @@ function Tasks() {
     }
   };
 
+  const fetchProjects = async () => {
+    try {
+      const allProjects = (await getProjects()) || [];
+
+      let userTeamIds = [];
+      try {
+        if (userId) {
+          const userTeams = (await getUserTeams(userId)) || [];
+          userTeamIds = userTeams.map((m) => String(m.teamId));
+        }
+      } catch (err) {
+        console.error("Error fetching user teams:", err);
+      }
+
+      const userProjects = allProjects.filter((project) => {
+        const isCreator = String(project.createdByUserId || project.userId) === String(userId);
+        const isTeamMatch = userTeamIds.some((tId) => String(project.teamId) === String(tId));
+        const isMember =
+          Array.isArray(project.members) &&
+          project.members.some((m) => String(m.id || m.userId || m) === String(userId));
+
+        return isCreator || isTeamMatch || isMember;
+      });
+
+      setProjectsList(userProjects);
+      return userProjects;
+    } catch (error) {
+      console.error("Error fetching user projects:", error);
+      return [];
+    }
+  };
+
   const fetchUserTasks = async () => {
     if (!userId) return;
 
     try {
       await fetchUsersDirectory();
+      const userProjects = await fetchProjects();
+      const userProjectIds = userProjects.map((p) => String(p.id || p._id));
 
-      const allDatabaseTasks = await getAllTasks() || [];
-      let activeTeamId = teamId;
+      const allDatabaseTasks = (await getAllTasks()) || [];
 
-      if (!activeTeamId) {
-        const currentUserTask = allDatabaseTasks.find(task => String(task.userId) === String(userId));
-        if (currentUserTask?.teamId) {
-          activeTeamId = String(currentUserTask.teamId);
-          setTeamId(activeTeamId);
-        }
-      }
-
-      const filteredTasks = activeTeamId
-        ? allDatabaseTasks.filter(task => String(task.teamId) === String(activeTeamId))
-        : allDatabaseTasks.filter(task => String(task.userId) === String(userId));
+      const filteredTasks = allDatabaseTasks.filter((task) => {
+        const isAssigned = String(task.userId) === String(userId);
+        const belongsToUserProject = userProjectIds.includes(String(task.projectId));
+        return isAssigned || belongsToUserProject;
+      });
 
       const sortedTasks = [...filteredTasks].sort((a, b) => {
         const aIsMine = String(a.userId) === String(userId);
@@ -223,7 +278,7 @@ function Tasks() {
     if (userId) {
       fetchUserTasks();
     }
-  }, [userId, teamId]);
+  }, [userId]);
 
   const handleTaskCardClick = (task, isAssignedToCurrentUser) => {
     if (isAssignedToCurrentUser) {
@@ -260,16 +315,10 @@ function Tasks() {
     }
   };
 
-  const formatDisplayDate = (dateVal) => {
-    if (!dateVal) return "N/A";
-    const dateObj = typeof dateVal === 'number' ? new Date(dateVal * 1000) : new Date(dateVal);
-    
-    if (isNaN(dateObj.getTime())) return dateVal;
-
-    return dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-  };
-
   const handleTaskCreation = () => {
+    const today = formatDateForInput(new Date());
+    setIssueDate(today);
+    setFinalDate(today);
     setOpenTaskEntry(true);
   };
 
@@ -288,22 +337,27 @@ function Tasks() {
       finaldate: finalDate,
       status: "Incomplete",
       priority: priority,
-      userId: userId || null,
-      teamId: teamId || null,
+      projectId: projectId || null,
+      userId: userId || null
     };
 
     try {
-      await addtasks(newTask);
-      await logActivity(userId, "Task Created", taskName);
+      const createdResponse = await addtasks(newTask);
+      const createdTask = createdResponse?.data || createdResponse || newTask;
 
-      await fetchUserTasks();
+      setTasks(prevTasks => [createdTask, ...prevTasks]);
+
+      await logActivity(userId, "Task Created", taskName);
 
       setTaskName("");
       setTaskDescription("");
       setIssueDate("");
       setFinalDate("");
       setPriority("");
+      setProjectId("");
       setOpenTaskEntry(false);
+
+      await fetchUserTasks();
     } catch (error) {
       console.error("Error creating task:", error);
     }
@@ -352,7 +406,7 @@ function Tasks() {
       <div className="tasks-grid">
         {filteredTasks.map(task => (
           <TaskCard
-            key={task.id || task._id}
+            key={task.id || task._id || Math.random()}
             task={task}
             userId={userId}
             usersMap={usersMap}
@@ -459,12 +513,33 @@ function Tasks() {
                 </div>
 
                 <div>
+                  <label>Project</label>
+                  <select
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value)}
+                    className="inputfield cursor-pointer"
+                    required
+                  >
+                    <option value="" disabled>Select Project...</option>
+                    {projectsList.map((proj) => {
+                      const pId = proj.id || proj._id;
+                      return (
+                        <option key={pId} value={pId}>
+                          {proj.name || proj.title || `Project ${pId}`}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                <div>
                   <label>Issue Date</label>
                   <Input
                     type="date"
-                    value={issueDate}
+                    value={formatDateForInput(issueDate)}
+                    onClick={(e) => e.target.showPicker && e.target.showPicker()}
                     onChange={(e) => setIssueDate(e.target.value)}
-                    className="inputfield"
+                    className="inputfield cursor-pointer"
                     required
                   />
                 </div>
@@ -473,9 +548,10 @@ function Tasks() {
                   <label>End Date</label>
                   <Input
                     type="date"
-                    value={finalDate}
+                    value={formatDateForInput(finalDate)}
+                    onClick={(e) => e.target.showPicker && e.target.showPicker()}
                     onChange={(e) => setFinalDate(e.target.value)}
-                    className="inputfield"
+                    className="inputfield cursor-pointer"
                     required
                   />
                 </div>

@@ -14,7 +14,6 @@ body,
   color: #ffffff;
 }
 
-/* --- Header & Search Bar --- */
 .dashboard-header {
   position: fixed;
   top: 0;
@@ -65,7 +64,6 @@ body,
   pointer-events: none;
 }
 
-/* --- Main Layout --- */
 .team-page-wrapper {
   display: flex;
   min-height: 100vh;
@@ -106,14 +104,67 @@ body,
 .team-header-actions {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.75rem;
+
 }
 
-/* --- Buttons --- */
+.project-filter-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  top: 9px;
+}
+
+.project-filter-icon {
+  position: absolute;
+  left: 12px;
+  transform: translateY(-50%);
+  color: #a1a1aa;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.project-filter-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: #121623;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  height: 42px;
+  padding: 0 2.5rem 0 2.25rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.project-filter-select:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+  background-color: #181d2f;
+}
+
+.project-filter-select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+
+.project-filter-select option {
+  background-color: #121623;
+  color: #ffffff;
+  padding: 8px;
+}
+
 .createTaskBtn {
   background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
   color: #ffffff;
-  padding: 10px 18px;
+  height: 42px;
+  padding: 0 18px;
   border-radius: 10px;
   width: auto;
   display: inline-flex;
@@ -160,7 +211,6 @@ body,
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-/* --- Filter Tabs --- */
 .status-filter-bar {
   display: flex;
   align-items: center;
@@ -233,7 +283,6 @@ body,
   font-weight: 500;
 }
 
-/* --- Team Member Grid & Clean Cards --- */
 .team-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -282,7 +331,6 @@ body,
   border-left: 4px solid #6366f1 !important;
 }
 
-/* --- Card Three-Dots Options & Dropdown --- */
 .card-menu-container {
   position: absolute;
   top: 0.75rem;
@@ -442,7 +490,6 @@ body,
   background-color: #6b7280;
 }
 
-/* --- Add Member Card --- */
 .add-member-card {
   display: flex;
   flex-direction: column;
@@ -487,80 +534,6 @@ body,
   margin-top: 0.25rem;
 }
 
-/* --- Analytics Grid --- */
-.team-analytics-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.25rem;
-}
-
-@media (min-width: 768px) {
-  .team-analytics-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.analytics-card {
-  padding: 1.25rem;
-  border: 1px solid #1e2330;
-  border-radius: 10px;
-  background: #121623;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
-}
-
-.analytics-card-flex {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.analytics-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-
-.analytics-title {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.analytics-tag {
-  font-size: 0.75rem;
-  color: #a1a1aa;
-}
-
-.team-id-badge {
-  color: #a5b4fc;
-  font-family: monospace;
-  font-size: 0.85rem;
-}
-
-.health-score-container {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.health-score-value {
-  font-size: 2rem;
-  font-weight: 800;
-  color: #ffffff;
-}
-
-.health-score-trend {
-  font-size: 0.75rem;
-  color: #34d399;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-/* --- Modal Overlay & Form --- */
 @keyframes slideIn {
   from {
     opacity: 0;
@@ -729,11 +702,64 @@ body,
   box-shadow: 0 6px 18px rgba(99, 102, 241, 0.5);
 }
 
-/* --- Responsiveness --- */
+.sidebar-wrapper-custom {
+  margin: 1.25rem;
+  padding: 1.25rem;
+}
+
+.sidebar-trigger-custom {
+  color: #ffffff;
+}
+
+.no-users-text {
+  padding: 0.5rem 0;
+}
+
+.skills-preview-box {
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.skills-preview-title {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.skills-tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.skill-tag-pill {
+  font-size: 0.75rem;
+  padding: 3px 9px;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.no-skills-text {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.form-buttons-container {
+  margin-top: 20px;
+}
+
 @media (min-width: 769px) {
   .dashboard-header {
     left: auto;
     width: calc(100% - 280px);
+  }
+  .sidebar-trigger-custom {
+    display: none;
   }
 }
 
@@ -761,9 +787,11 @@ body,
     width: 100%;
   }
 
-  .btn-secondary,
+  .project-filter-wrapper,
+  .project-filter-select,
   .team-header-actions .createTaskBtn {
     flex: 1;
+    width: 100%;
     justify-content: center;
   }
 }

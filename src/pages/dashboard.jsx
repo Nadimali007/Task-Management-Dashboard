@@ -4,7 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/sidebar";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, FolderArchive, CheckCircle, Hourglass, AlertCircle, Check, ListFilter } from "lucide-react";
-import { addtasks, gettasks, recentactitivity, logActivity } from "@/services/taskservices";
+import { addtasks, gettasks, recentactitivity, logActivity, getProjects, getProjectsByTeam, getUserTeams } from "@/services/taskservices";
 import Performancechart from "@/components/performancechart";
 import '../css/dashboard.css';
 
@@ -15,6 +15,8 @@ function Dashboard() {
   const [issueDate, setIssueDate] = useState("");
   const [finalDate, setFinalDate] = useState("");
   const [priority, setpriority] = useState("");
+  const [projectId, setProjectId] = useState("");
+  const [projectsList, setProjectsList] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [recentactivities, setRecentactivities] = useState([]);
   const [filterPriority, setFilterPriority] = useState("All");
@@ -22,7 +24,6 @@ function Dashboard() {
 
   const location = useLocation();
 
-  // Retrieve Logged-in User Data (ID, Name, Team ID)
   const getUserData = () => {
     const sessionUser = JSON.parse(sessionStorage.getItem("user") || "{}");
     const localUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -108,16 +109,51 @@ function Dashboard() {
     }
   };
 
+  const fetchProjects = async () => {
+    try {
+      const allProjects = (await getProjects()) || [];
+      let userTeamIds = [];
+
+      try {
+        const userTeams = (await getUserTeams(currentUserId)) || [];
+        userTeamIds = userTeams.map((m) => String(m.teamId));
+      } catch (err) {
+        console.error("Error fetching user teams:", err);
+      }
+
+      if (currentTeamId && !userTeamIds.includes(String(currentTeamId))) {
+        userTeamIds.push(String(currentTeamId));
+      }
+
+      const userProjects = allProjects.filter((project) => {
+        const isCreator = String(project.createdByUserId || project.userId) === String(currentUserId);
+
+        const isTeamMatch = userTeamIds.some((tId) => String(project.teamId) === String(tId));
+
+        const isMember =
+          Array.isArray(project.members) &&
+          project.members.some((m) => String(m.id || m.userId || m) === String(currentUserId));
+
+        return isCreator || isTeamMatch || isMember;
+      });
+
+      setProjectsList(userProjects);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    }
+  };
+
   useEffect(() => {
     fetchTasks();
     fetchActivities();
+    fetchProjects();
     if (currentUserId) {
       sessionStorage.setItem("currentUserId", currentUserId);
     }
-  }, [currentUserId]);
+  }, [currentUserId, currentTeamId]);
 
   const userTasks = tasks.filter(task => String(task.userId) === String(currentUserId));
-  
+
   const totalTasksCount = userTasks.length;
   const completeTaskCounts = userTasks.filter(task => task.status?.toLowerCase() === "completed").length;
   const pendingTasksCount = userTasks.filter(task => task.status?.toLowerCase() !== "completed").length;
@@ -137,16 +173,16 @@ function Dashboard() {
       return;
     }
 
-    // Include teamId alongside userId when constructing new task object
     const newTask = {
       title: taskName,
       description: taskDescription,
       issuedate: issueDate,
       finaldate: finalDate,
-      status: "Incomplete",
+      status: "In Progress",
       priority: priority,
-      userId: currentUserId || null,
+      projectId: projectId || null,
       teamId: currentTeamId || null,
+      userId: currentUserId || null,
     };
 
     try {
@@ -161,6 +197,7 @@ function Dashboard() {
       setIssueDate("");
       setFinalDate("");
       setpriority("");
+      setProjectId("");
       setOpenTaskEntry(false);
     } catch (error) {
       console.error("Error creating task:", error);
@@ -198,7 +235,7 @@ function Dashboard() {
 
           <div className="welcomdiv">
             <h2>Good Morning {name} </h2>
-            <p>You have {pendingTasksCount} pending and an upcoming meeting in 30 minutes. Let's make this day productive.</p>
+            <p>You have {pendingTasksCount} pending tasks. Let's make this day productive.</p>
             <div className="taskbuttons">
               <button className="createtask" onClick={() => setOpenTaskEntry(true)}>
                 <Plus /> Create Task
@@ -369,6 +406,23 @@ function Dashboard() {
                     placeholder="Describe your task..."
                     className="textarea"
                   />
+                </div>
+
+                <div>
+                  <label>Project</label>
+                  <select
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value)}
+                    className="inputfield cursor-pointer"
+                    required
+                  >
+                    <option value="" disabled>Select Project...</option>
+                    {projectsList.map((proj) => (
+                      <option key={proj.id || proj._id} value={proj.id || proj._id}>
+                        {proj.name || proj.title}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

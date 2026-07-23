@@ -1,17 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import AppSidebar from "@/components/sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { 
-  Search, 
-  Filter, 
-  UserPlus, 
-  Plus, 
-  MoreVertical, 
-  X,
-  Trash2
-} from "lucide-react";
+import { Search, Filter, UserPlus, Plus, MoreVertical, X, Trash2 } from "lucide-react";
 import { getUsers, getProfiles, updateUser, updateProfile } from "@/services/authservices";
-import { getAllTasks } from "@/services/taskservices";
+import { getAllTasks, getProjects, getUserTeams, updateProject } from "@/services/taskservices";
 import "@/css/team.css";
 
 function Team() {
@@ -27,6 +19,9 @@ function Team() {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [userProjects, setUserProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("ALL");
 
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRef = useRef(null);
@@ -73,11 +68,50 @@ function Team() {
       try {
         setLoading(true);
 
-        const [usersData, profilesData, allTasks] = await Promise.all([
+        const [usersData, profilesData, allTasks, allProjects] = await Promise.all([
           getUsers().catch(() => []),
           getProfiles().catch(() => []),
-          getAllTasks().catch(() => [])
+          getAllTasks().catch(() => []),
+          getProjects().catch(() => [])
         ]);
+
+        const currentUserRaw = usersData.find(u => String(u.id || u._id) === String(currentUserId)) || {};
+        const currentProfileRaw = profilesData.find(p => String(p.userId || p.id) === String(currentUserId)) || {};
+        const currentUserTaskProjectIds = allTasks
+          .filter(t => String(t.userId) === String(currentUserId) && t.projectId)
+          .map(t => String(t.projectId));
+
+        const currentUserDirectProjectIds = [
+          currentUserRaw.projectId ? String(currentUserRaw.projectId) : null,
+          currentProfileRaw.projectId ? String(currentProfileRaw.projectId) : null,
+          ...currentUserTaskProjectIds
+        ].filter(Boolean);
+
+        let userTeamIds = [];
+        if (currentUserId) {
+          try {
+            const userTeams = (await getUserTeams(currentUserId).catch(() => [])) || [];
+            userTeamIds = userTeams.map((m) => String(m.teamId));
+          } catch (err) {
+            console.error("Error fetching user teams:", err);
+          }
+        }
+
+        const filteredUserProjects = allProjects.filter((project) => {
+          const pId = String(project.id || project._id);
+          
+          const isCreator = String(project.createdByUserId || project.userId) === String(currentUserId);
+          const isTeamMatch = userTeamIds.some((tId) => String(project.teamId) === String(tId));
+          const isMemberInArray =
+            Array.isArray(project.members) &&
+            project.members.some((m) => String(m.id || m.userId || m) === String(currentUserId));
+          
+          const isDirectlyAssigned = currentUserDirectProjectIds.includes(pId);
+
+          return isCreator || isTeamMatch || isMemberInArray || isDirectlyAssigned;
+        });
+
+        setUserProjects(filteredUserProjects);
 
         let activeTeamId = currentTeamId;
 
@@ -98,14 +132,35 @@ function Team() {
         }
 
         const mergedMembers = usersData.map((user) => {
+          const userIdStr = String(user.id || user._id);
           const profile = profilesData.find(
-            (p) => String(p.userId || p.id) === String(user.id || user._id)
+            (p) => String(p.userId || p.id) === userIdStr
           ) || {};
 
           const memberTeamId =
             user.teamId ||
             profile.teamId ||
-            allTasks.find((t) => String(t.userId) === String(user.id || user._id))?.teamId;
+            allTasks.find((t) => String(t.userId) === userIdStr)?.teamId;
+
+          const userTaskProjectIds = allTasks
+            .filter((t) => String(t.userId) === userIdStr && t.projectId)
+            .map((t) => String(t.projectId));
+
+          const projectMembershipIds = allProjects
+            .filter(project => {
+              if (!Array.isArray(project.members)) return false;
+              return project.members.some(m => String(m.id || m.userId || m) === userIdStr);
+            })
+            .map(p => String(p.id || p._id));
+
+          const allProjectIds = Array.from(new Set([
+            ...userTaskProjectIds,
+            ...projectMembershipIds,
+            ...(user.projectId ? [String(user.projectId)] : []),
+            ...(profile.projectId ? [String(profile.projectId)] : [])
+          ]));
+
+          const memberProjectId = user.projectId || profile.projectId || null;
 
           let rawSkills = profile.skills || user.skills || [];
           let skillsArray = [];
@@ -115,7 +170,6 @@ function Team() {
             skillsArray = rawSkills.split(",").map((s) => s.trim());
           }
 
-          // Updated status parsing to map database values accurately
           let rawStatus = user.status || profile.availability || "Available";
           let statusLabel = "Available";
           const statusLower = String(rawStatus).toLowerCase();
@@ -129,8 +183,10 @@ function Team() {
           }
 
           return {
-            id: String(user.id || user._id),
+            id: userIdStr,
             teamId: memberTeamId ? String(memberTeamId) : null,
+            projectId: memberProjectId ? String(memberProjectId) : null,
+            projectIds: allProjectIds,
             name: user.name || profile.fullName || "Team Member",
             role: profile.jobTitle || user.role || "Employee",
             department: profile.department || user.department || "General",
@@ -144,11 +200,11 @@ function Team() {
         const currentUserData = mergedMembers.find((m) => m.id === currentUserId);
         if (currentUserData) {
           const roleLower = (currentUserData.role || "").toLowerCase();
-          const managerRoles = ["manager", "admin", "lead", "cto", "product manager"];
+          const managerRoles = ["manager", "admin", "lead", "cto", "product manager", "team leader"];
           const userIsManager = managerRoles.some((r) => roleLower.includes(r));
           setIsManager(userIsManager);
         } else {
-          setIsManager(true);
+          setIsManager(false);
         }
 
         const userTeamMembers = mergedMembers.filter((member) => {
@@ -180,9 +236,21 @@ function Team() {
     }
   }, [currentUserId, currentTeamId]);
 
+  const canAddMemberToCurrentContext = () => {
+    if (isManager) return true;
+    if (selectedProjectId && selectedProjectId !== "ALL") {
+      const targetProject = userProjects.find((p) => String(p.id || p._id) === String(selectedProjectId));
+      if (targetProject) {
+        const isCreator = String(targetProject.createdByUserId || targetProject.userId) === String(currentUserId);
+        return isCreator;
+      }
+    }
+    return false;
+  };
+
   const handleAssignMember = async (e) => {
     e.preventDefault();
-    if (!selectedUserId || !currentTeamId) return;
+    if (!selectedUserId) return;
 
     try {
       setIsSubmitting(true);
@@ -190,14 +258,75 @@ function Team() {
       const targetMember = nonMembers.find((m) => String(m.id) === String(selectedUserId));
       if (!targetMember) return;
 
-      if (typeof updateProfile === "function") {
-        await updateProfile(selectedUserId, { teamId: currentTeamId }).catch(() => {});
-      }
-      if (typeof updateUser === "function") {
-        await updateUser(selectedUserId, { teamId: currentTeamId }).catch(() => {});
+      const isSpecificProjectSelected = selectedProjectId && selectedProjectId !== "ALL";
+      
+      let effectiveTeamId = currentTeamId || "1";
+      if (isSpecificProjectSelected) {
+        const targetProject = userProjects.find((p) => String(p.id || p._id) === String(selectedProjectId));
+        if (targetProject && targetProject.teamId) {
+          effectiveTeamId = String(targetProject.teamId);
+        }
       }
 
-      const updatedMember = { ...targetMember, teamId: currentTeamId };
+      const isSpecificDepartmentSelected = activeFilter && activeFilter !== "All Members";
+
+      const updatePayload = {
+        teamId: effectiveTeamId,
+        ...(isSpecificProjectSelected && { projectId: selectedProjectId }),
+        ...(isSpecificDepartmentSelected && { department: activeFilter })
+      };
+
+      if (typeof updateProfile === "function") {
+        await updateProfile(selectedUserId, updatePayload).catch(() => {});
+      }
+      if (typeof updateUser === "function") {
+        await updateUser(selectedUserId, updatePayload).catch(() => {});
+      }
+
+      if (isSpecificProjectSelected && typeof updateProject === "function") {
+        const currentProj = userProjects.find((p) => String(p.id || p._id) === String(selectedProjectId));
+        if (currentProj) {
+          const existingMembers = Array.isArray(currentProj.members) ? currentProj.members : [];
+          const alreadyMember = existingMembers.some(
+            (m) => String(m.id || m.userId || m) === String(selectedUserId)
+          );
+
+          if (!alreadyMember) {
+            const updatedMembersList = [...existingMembers, { id: selectedUserId }];
+            await updateProject(selectedProjectId, { members: updatedMembersList }).catch((err) => {
+              console.error("Failed to update project members in database:", err);
+            });
+          }
+        }
+      }
+
+      const updatedMember = {
+        ...targetMember,
+        teamId: effectiveTeamId,
+        department: isSpecificDepartmentSelected ? activeFilter : targetMember.department,
+        projectId: isSpecificProjectSelected ? selectedProjectId : targetMember.projectId,
+        projectIds: isSpecificProjectSelected
+          ? Array.from(new Set([...(targetMember.projectIds || []), selectedProjectId]))
+          : (targetMember.projectIds || [])
+      };
+
+      if (isSpecificProjectSelected) {
+        setUserProjects((prevProjects) =>
+          prevProjects.map((p) => {
+            const pId = String(p.id || p._id);
+            if (pId === String(selectedProjectId)) {
+              const existingMembers = Array.isArray(p.members) ? p.members : [];
+              const alreadyMember = existingMembers.some(
+                (m) => String(m.id || m.userId || m) === String(selectedUserId)
+              );
+              if (!alreadyMember) {
+                return { ...p, members: [...existingMembers, { id: selectedUserId }] };
+              }
+            }
+            return p;
+          })
+        );
+      }
 
       setMembers((prev) => [...prev, updatedMember]);
       setNonMembers((prev) => prev.filter((m) => String(m.id) !== String(selectedUserId)));
@@ -238,7 +367,35 @@ function Team() {
     setOpenMenuId((prevId) => (prevId === id ? null : id));
   };
 
+  const isMemberInSelectedProject = (member) => {
+    if (selectedProjectId === "ALL") return true;
+
+    if (String(member.id) === String(currentUserId)) return true;
+
+    if (String(member.projectId) === String(selectedProjectId)) return true;
+
+    if (Array.isArray(member.projectIds) && member.projectIds.includes(String(selectedProjectId))) return true;
+
+    const currentProj = userProjects.find((p) => String(p.id || p._id) === String(selectedProjectId));
+    if (currentProj && Array.isArray(currentProj.members)) {
+      const isMemberInProject = currentProj.members.some((m) => {
+        const memberId = String(m.id || m.userId || m);
+        return memberId === String(member.id);
+      });
+      
+      if (isMemberInProject) return true;
+    }
+
+    if (currentProj && member.teamId && String(currentProj.teamId) === String(member.teamId)) {
+      return true;
+    }
+
+    return false;
+  };
+
   const filteredMembers = members.filter((member) => {
+    const matchesProject = isMemberInSelectedProject(member);
+
     const matchesFilter =
       activeFilter === "All Members" ||
       member.department?.toLowerCase() === activeFilter.toLowerCase();
@@ -248,7 +405,7 @@ function Team() {
       member.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
       member.skills.some((skill) => skill.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    return matchesFilter && matchesSearch;
+    return matchesProject && matchesFilter && matchesSearch;
   });
 
   const selectedUserObject = nonMembers.find(
@@ -256,14 +413,15 @@ function Team() {
   );
 
   const filterTabs = ["All Members", "IT", "Development", "QA", "Design", "Marketing", "HR"];
+  const hasAddPermission = canAddMemberToCurrentContext();
 
   return (
     <SidebarProvider>
       <div className="team-page-wrapper">
-        <AppSidebar className="m-5 p-5" />
+        <AppSidebar className="sidebar-wrapper-custom" />
 
         <header className="dashboard-header">
-          <SidebarTrigger className="md:hidden text-white" />
+          <SidebarTrigger className="sidebar-trigger-custom" />
           <div className="search-container-header">
             <Search className="search-icon" />
             <input
@@ -281,14 +439,30 @@ function Team() {
             <div>
               <h1 className="tasks-title">Team Directory</h1>
               <p className="tasks-subtitle">
-                Manage roles, departments, and members across Team {currentTeamId || ""}. ({members.length} members found)
+                Manage roles, departments, and members across Team {currentTeamId || ""}. ({filteredMembers.length} members found)
               </p>
             </div>
             <div className="team-header-actions">
-              <button className="btn-secondary">
-                <Filter size={16} /> Filter
-              </button>
-              {isManager && (
+              <div className="project-filter-wrapper">
+                <Filter size={16} className="project-filter-icon" />
+                <select
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  className="project-filter-select"
+                >
+                  <option value="ALL">All My Projects</option>
+                  {userProjects.map((project) => {
+                    const pId = project.id || project._id;
+                    return (
+                      <option key={pId} value={pId}>
+                        {project.name || project.title || `Project ${pId}`}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {hasAddPermission && (
                 <button className="createTaskBtn" onClick={() => setIsInviteModalOpen(true)}>
                   <UserPlus size={16} /> Add Member
                 </button>
@@ -299,9 +473,13 @@ function Team() {
           <div className="status-filter-bar">
             {filterTabs.map((tab) => {
               const isActive = activeFilter === tab;
-              const count = tab === "All Members" 
-                ? members.length 
-                : members.filter(m => m.department?.toLowerCase() === tab.toLowerCase()).length;
+
+              const projectFiltered = members.filter((m) => isMemberInSelectedProject(m));
+
+              const count =
+                tab === "All Members"
+                  ? projectFiltered.length
+                  : projectFiltered.filter((m) => m.department?.toLowerCase() === tab.toLowerCase()).length;
 
               return (
                 <button
@@ -322,7 +500,7 @@ function Team() {
             </div>
           ) : filteredMembers.length === 0 ? (
             <div className="empty-tasks-state">
-              <p className="empty-tasks-message">No team members match the current filter criteria.</p>
+              <p className="empty-tasks-message">No team members match the current project or filter criteria.</p>
             </div>
           ) : (
             <div className="team-grid">
@@ -333,10 +511,10 @@ function Team() {
                     key={member.id}
                     className={`team-card ${isCurrentUser ? "team-card-mine" : ""}`}
                   >
-                    {isManager && (
+                    {hasAddPermission && (
                       <div className="card-menu-container">
-                        <button 
-                          className="card-more-btn" 
+                        <button
+                          className="card-more-btn"
                           aria-label="Member options"
                           onClick={(e) => handleToggleMenu(member.id, e)}
                         >
@@ -350,7 +528,7 @@ function Team() {
                               onClick={() => handleDeleteMember(member.id)}
                             >
                               <Trash2 size={14} />
-                              Delete 
+                              Delete
                             </button>
                           </div>
                         )}
@@ -382,8 +560,8 @@ function Team() {
                 );
               })}
 
-              {isManager && (
-                <div 
+              {hasAddPermission && (
+                <div
                   className="add-member-card"
                   onClick={() => setIsInviteModalOpen(true)}
                 >
@@ -398,12 +576,12 @@ function Team() {
           )}
         </main>
 
-        {isInviteModalOpen && isManager && (
+        {isInviteModalOpen && hasAddPermission && (
           <div className="modal-overlay">
             <div className="modal-card">
               <div className="modal-header">
-                <button 
-                  className="modal-close-btn" 
+                <button
+                  className="modal-close-btn"
                   onClick={() => {
                     setIsInviteModalOpen(false);
                     setSelectedUserId("");
@@ -414,15 +592,15 @@ function Team() {
               </div>
               <h2 className="modal-title">Add User to Team</h2>
               <p className="modal-description">
-                Select a user to assign them to Team {currentTeamId || ""}.
+                Select a user to assign them to Team {currentTeamId || "1"}.
               </p>
 
               <form className="taskform" onSubmit={handleAssignMember}>
                 <div>
                   <label>Select User</label>
                   {nonMembers.length === 0 ? (
-                    <p className="tasks-subtitle" style={{ padding: "0.5rem 0" }}>
-                      No available users found outside Team {currentTeamId}.
+                    <p className="tasks-subtitle no-users-text">
+                      No available users found outside Team {currentTeamId || "1"}.
                     </p>
                   ) : (
                     <>
@@ -441,30 +619,20 @@ function Team() {
                       </select>
 
                       {selectedUserObject && (
-                        <div style={{ marginTop: "12px", padding: "10px", background: "rgba(255, 255, 255, 0.05)", borderRadius: "8px" }}>
-                          <span style={{ fontSize: "0.8rem", color: "#9ca3af", display: "block", marginBottom: "6px" }}>
+                        <div className="skills-preview-box">
+                          <span className="skills-preview-title">
                             Member Skills:
                           </span>
                           {selectedUserObject.skills && selectedUserObject.skills.length > 0 ? (
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                            <div className="skills-tags-container">
                               {selectedUserObject.skills.map((skill, idx) => (
-                                <span
-                                  key={idx}
-                                  style={{
-                                    fontSize: "0.75rem",
-                                    padding: "3px 9px",
-                                    borderRadius: "12px",
-                                    background: "rgba(99, 102, 241, 0.2)",
-                                    color: "#a5b4fc",
-                                    border: "1px solid rgba(99, 102, 241, 0.4)"
-                                  }}
-                                >
+                                <span key={idx} className="skill-tag-pill">
                                   {skill}
                                 </span>
                               ))}
                             </div>
                           ) : (
-                            <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                            <span className="no-skills-text">
                               No skills listed for this member.
                             </span>
                           )}
@@ -474,10 +642,10 @@ function Team() {
                   )}
                 </div>
 
-                <div className="buttons" style={{ marginTop: "20px" }}>
-                  <button 
-                    type="button" 
-                    className="cancelButton" 
+                <div className="buttons form-buttons-container">
+                  <button
+                    type="button"
+                    className="cancelButton"
                     onClick={() => {
                       setIsInviteModalOpen(false);
                       setSelectedUserId("");
@@ -485,8 +653,8 @@ function Team() {
                   >
                     Cancel
                   </button>
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     className="saveButton"
                     disabled={!selectedUserId || isSubmitting}
                   >
